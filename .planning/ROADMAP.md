@@ -34,7 +34,7 @@ For full phase details, see: [.planning/milestones/v1.1-ROADMAP.md](milestones/v
 
 **Milestone Goal:** Close the loop between AI agents and local tools — Selection + Dispatch becomes a live conversation with error recovery, context awareness, session memory, and dry-run validation.
 
-- [ ] **Phase 13: Foundation** - Build session store and STDERR bridge as standalone, independently-tested leaf modules
+- [x] **Phase 13: Foundation** - Build session store and STDERR bridge as standalone, independently-tested leaf modules (completed 2026-02-24)
 - [ ] **Phase 14: Dispatcher Integration** - Wire recovery bridge and session store into dispatchSelection; structured return shape
 - [ ] **Phase 15: Dry-Run Validation** - Structured DryRunResult, --force scoping fix, and fidelity test coverage
 - [ ] **Phase 16: Context Envelope** - Context return fields with 2KB cap and redaction on every dispatchSelection call
@@ -51,7 +51,7 @@ For full phase details, see: [.planning/milestones/v1.1-ROADMAP.md](milestones/v
   3. Session write uses atomic temp file + `renameSync` and sets permissions to `0o600`
   4. `dispatcher/stderr-bridge.js` returns a `RecoveryPayload` with a redacted stderr hint when exit code is non-zero
   5. Both modules are tested in complete isolation with zero imports from `dispatcher/index.js`
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 13-01-PLAN.md — TDD session store (ring buffer, atomic write, redaction)
 - [ ] 13-02-PLAN.md — TDD stderr bridge (RecoveryPayload, stderr truncation, redaction)
@@ -97,7 +97,7 @@ Plans:
 | 10. Shared Command Policy Foundation | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 11. Secure Dispatcher | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 12. Selection Normalization | v1.1 | 2/2 | Complete | 2026-02-24 |
-| 13. Foundation | v1.2 | 0/2 | Planning | - |
+| 13. Foundation | 2/2 | Complete    | 2026-02-24 | - |
 | 14. Dispatcher Integration | v1.2 | 0/? | Not started | - |
 | 15. Dry-Run Validation | v1.2 | 0/? | Not started | - |
 | 16. Context Envelope | v1.2 | 0/? | Not started | - |
