@@ -64,26 +64,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| ERR-04 | — | Pending |
-| SESS-01 | — | Pending |
-| SESS-02 | — | Pending |
-| SESS-03 | — | Pending |
-| SESS-04 | — | Pending |
-| CTX-01 | — | Pending |
-| CTX-02 | — | Pending |
-| CTX-03 | — | Pending |
-| DRY-01 | — | Pending |
-| DRY-02 | — | Pending |
-| DRY-03 | — | Pending |
+| ERR-01 | Phase 13 | Pending |
+| ERR-02 | Phase 14 | Pending |
+| ERR-03 | Phase 14 | Pending |
+| ERR-04 | Phase 14 | Pending |
+| SESS-01 | Phase 13 | Pending |
+| SESS-02 | Phase 13 | Pending |
+| SESS-03 | Phase 13 | Pending |
+| SESS-04 | Phase 13 | Pending |
+| CTX-01 | Phase 16 | Pending |
+| CTX-02 | Phase 16 | Pending |
+| CTX-03 | Phase 16 | Pending |
+| DRY-01 | Phase 15 | Pending |
+| DRY-02 | Phase 15 | Pending |
+| DRY-03 | Phase 15 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 — traceability populated for v1.2 roadmap*
