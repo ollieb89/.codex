@@ -65,7 +65,7 @@ Plans:
   2. The original label text and metadata for each entry are unchanged after normalization
   3. `--select=2` and `GS_DONE_SELECT=2` resolve to the item at post-normalization position 2 consistently
   4. A list with duplicate leading numbers causes a hard error with a retry hint rather than silently selecting the wrong item
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 12-01-PLAN.md — Harden normalizeOptions() with TDD: gap lists, 0-indexing, leading zeros, markdown-wrapped numbers, error messages
 - [ ] 12-02-PLAN.md — Wire run() convenience function in index.js and ensure headless --select resolves post-normalization IDs
@@ -79,7 +79,7 @@ Plans:
 | 9. UX Polish & Headless | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 10. Shared Command Policy Foundation | 2/2 | Complete   | 2026-02-24 | - |
 | 11. Secure Dispatcher | v1.1 | Complete    | 2026-02-24 | - |
-| 12. Selection Normalization | v1.1 | 0/2 | Planned | - |
+| 12. Selection Normalization | 1/2 | In Progress|  | - |
 
 ---
 *For archived requirements, see: [.planning/milestones/v1.0-REQUIREMENTS.md](milestones/v1.0-REQUIREMENTS.md)*
