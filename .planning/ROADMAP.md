@@ -37,7 +37,10 @@ For full phase details, see: [.planning/milestones/v1.0-ROADMAP.md](milestones/v
   2. `dispatcher/sanitize.js`, `dispatcher/preview.js`, and `dispatcher/index.js` each import their constants from `commands.js` rather than defining them inline
   3. Adding a new destructive term to `commands.js` is reflected in confirmation gating without any further edits to other files
   4. All existing dispatcher tests pass without modification after the extraction
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 10-01-PLAN.md — Create shared commands.js constants module and test suite
+- [ ] 10-02-PLAN.md — Refactor sanitize.js, preview.js, index.js to import from commands.js
 
 ### Phase 11: Secure Dispatcher
 **Goal**: Command previews redact the full set of real-world credential patterns with specific-to-generic ordering so no known secret leaks in terminal output or CI logs
@@ -68,7 +71,7 @@ For full phase details, see: [.planning/milestones/v1.0-ROADMAP.md](milestones/v
 | 7. Schema & Selector | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 8. Safe Dispatch | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 9. UX Polish & Headless | v1.0 | 2/2 | Complete | 2026-02-24 |
-| 10. Shared Command Policy Foundation | v1.1 | 0/? | Not started | - |
+| 10. Shared Command Policy Foundation | v1.1 | 0/2 | Planned | - |
 | 11. Secure Dispatcher | v1.1 | 0/? | Not started | - |
 | 12. Selection Normalization | v1.1 | 0/? | Not started | - |
 
