@@ -9,9 +9,9 @@ Requirements for v1.1.0 Standardize Selection & Security. Each maps to roadmap p
 
 ### Security & Dispatch
 
-- [ ] **SEC-01**: Dispatcher redacts provider-specific secrets (OpenAI `sk-*`, GitHub `ghp_*`, AWS `AKIA*`, Stripe `sk_live_*`, PEM blocks, connection strings) in command previews
-- [ ] **SEC-02**: Secret patterns are ordered specific-to-generic so prefix-based detection fires before generic fallback
-- [ ] **SEC-03**: Shared `commands.js` constants module eliminates independent destructive/mutating term definitions across sanitize, preview, and dispatcher
+- [x] **SEC-01**: Dispatcher redacts provider-specific secrets (OpenAI `sk-*`, GitHub `ghp_*`, AWS `AKIA*`, Stripe `sk_live_*`, PEM blocks, connection strings) in command previews
+- [x] **SEC-02**: Secret patterns are ordered specific-to-generic so prefix-based detection fires before generic fallback
+- [x] **SEC-03**: Shared `commands.js` constants module eliminates independent destructive/mutating term definitions across sanitize, preview, and dispatcher
 
 ### Selection Normalization
 
@@ -50,9 +50,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | Phase 11 | Pending |
-| SEC-02 | Phase 11 | Pending |
-| SEC-03 | Phase 10 | Pending |
+| SEC-01 | Phase 11 | Complete |
+| SEC-02 | Phase 11 | Complete |
+| SEC-03 | Phase 10 | Complete |
 | SEL-01 | Phase 12 | Pending |
 | SEL-02 | Phase 12 | Pending |
 | SEL-03 | Phase 12 | Pending |
@@ -64,4 +64,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 — traceability mapped during v1.1 roadmap creation*
+*Last updated: 2026-02-24 — SEC-01, SEC-02, SEC-03 completed*

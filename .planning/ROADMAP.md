@@ -23,7 +23,7 @@ For full phase details, see: [.planning/milestones/v1.0-ROADMAP.md](milestones/v
 **Milestone Goal:** Standardize the CLI selection experience and harden the dispatch layer with consolidated constants, expanded secret redaction, and auto-reindexing normalization.
 
 - [x] **Phase 10: Shared Command Policy Foundation** - Extract dispatcher constants into a single source-of-truth module (completed 2026-02-24)
-- [ ] **Phase 11: Secure Dispatcher** - Expand secret redaction and consolidate destructive-command detection
+- [x] **Phase 11: Secure Dispatcher** - Expand secret redaction and consolidate destructive-command detection (completed 2026-02-24)
 - [ ] **Phase 12: Selection Normalization** - Auto-reindex AI-generated numbered lists before render and headless resolution
 
 ## Phase Details
@@ -51,7 +51,7 @@ Plans:
   2. Secret patterns are applied in specific-to-generic order so provider-prefixed secrets are caught before the generic fallback fires
   3. Benign values (`TOKEN_COUNT=5`, file paths containing keyword substrings) are not redacted in previews
   4. The original, unredacted command is what `child_process.exec` receives — redaction affects display only
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 11-01-PLAN.md — Define SECRET_PATTERNS ordered array and isSafeValue helper in commands.js with tests
 - [ ] 11-02-PLAN.md — Refactor redactSecrets() in sanitize.js to use SECRET_PATTERNS with comprehensive tests
@@ -75,7 +75,7 @@ Plans:
 | 8. Safe Dispatch | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 9. UX Polish & Headless | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 10. Shared Command Policy Foundation | 2/2 | Complete   | 2026-02-24 | - |
-| 11. Secure Dispatcher | v1.1 | 0/2 | Planned | - |
+| 11. Secure Dispatcher | v1.1 | Complete    | 2026-02-24 | - |
 | 12. Selection Normalization | v1.1 | 0/? | Not started | - |
 
 ---
