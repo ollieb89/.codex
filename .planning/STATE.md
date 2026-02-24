@@ -7,15 +7,15 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 **Current milestone:** v1.0 Numbered CLI Selection UX
 
 ## Current Position
-- Phase: Not started (defining requirements)
+- Phase: Ready — Phase 7 (Schema & Selector)
 - Plan: —
-- Status: Defining requirements
-- Last activity: 2026-02-24 — Milestone v1.0 started
+- Status: Ready to execute
+- Last activity: 2026-02-24 — Milestone v1.0 requirements and roadmap set
 
 ## Progress
-- Phases total: — (pending new roadmap)
-- Current phase: — (pending)
-- Requirements total: — (pending)
+- Phases total: 3 (numbered 7–9)
+- Current phase: 7
+- Requirements total: 7
 
 ## Decisions
 - Auto mode, standard depth, balanced models, parallel execution

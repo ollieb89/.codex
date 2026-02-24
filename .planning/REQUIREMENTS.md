@@ -41,11 +41,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| SCH-01 | Phase 7 | Pending |
+| SCH-02 | Phase 7 | Pending |
+| SEL-01 | Phase 7 | Pending |
+| SEL-02 | Phase 9 | Pending |
+| SAF-01 | Phase 8 | Pending |
+| SAF-02 | Phase 8 | Pending |
+| UX-01 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7 ⚠️
+- Mapped to phases: 7
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-24*
