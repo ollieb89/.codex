@@ -51,7 +51,10 @@ For full phase details, see: [.planning/milestones/v1.1-ROADMAP.md](milestones/v
   3. Session write uses atomic temp file + `renameSync` and sets permissions to `0o600`
   4. `dispatcher/stderr-bridge.js` returns a `RecoveryPayload` with a redacted stderr hint when exit code is non-zero
   5. Both modules are tested in complete isolation with zero imports from `dispatcher/index.js`
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — TDD session store (ring buffer, atomic write, redaction)
+- [ ] 13-02-PLAN.md — TDD stderr bridge (RecoveryPayload, stderr truncation, redaction)
 
 ### Phase 14: Dispatcher Integration
 **Goal**: Users see STDERR output and a Retry / Edit / Abort prompt on every failed dispatch; every dispatch appends to session memory
@@ -94,7 +97,7 @@ For full phase details, see: [.planning/milestones/v1.1-ROADMAP.md](milestones/v
 | 10. Shared Command Policy Foundation | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 11. Secure Dispatcher | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 12. Selection Normalization | v1.1 | 2/2 | Complete | 2026-02-24 |
-| 13. Foundation | v1.2 | 0/? | Not started | - |
+| 13. Foundation | v1.2 | 0/2 | Planning | - |
 | 14. Dispatcher Integration | v1.2 | 0/? | Not started | - |
 | 15. Dry-Run Validation | v1.2 | 0/? | Not started | - |
 | 16. Context Envelope | v1.2 | 0/? | Not started | - |
