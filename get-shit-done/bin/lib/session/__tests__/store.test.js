@@ -109,9 +109,9 @@ test('file permissions are 0o600 after write', () => {
 
 test('command containing secret is stored with [REDACTED]', () => {
   const filePath = path.join(tmpDir, 'session.json');
-  appendRecord(filePath, { command: 'export STRIPE_SECRET_KEY=sk_live_abc123', exitCode: 0, stderrSnippet: '' });
+  appendRecord(filePath, { command: 'export MY_SECRET=supersecret123', exitCode: 0, stderrSnippet: '' });
   const raw = fs.readFileSync(filePath, 'utf8');
-  assert.ok(!raw.includes('sk_live_abc123'), 'raw secret must not appear in file');
+  assert.ok(!raw.includes('supersecret123'), 'raw secret must not appear in file');
   assert.ok(raw.includes('[REDACTED]'), 'redacted placeholder must appear');
 });
 
