@@ -26,6 +26,10 @@
 1. Dispatcher maps selection to action types (shell/diff/flow) and shows preview.
 2. Mutating actions require confirmation and support dry-run; read-only actions may run without extra prompt.
 3. Payloads are sanitized/allowlisted; commands/paths outside workspace are blocked.
+**Plans:** 2 planned  
+Plans:
+- [ ] 08-01-PLAN.md — Safety shield: sanitizer/allowlist, force-dispatch gate, redaction, edit-on-block
+- [ ] 08-02-PLAN.md — Preview + confirmation/dry-run dispatcher flow with metadata and mini-diff
 
 ## Phase 9: UX Polish & Headless
 
