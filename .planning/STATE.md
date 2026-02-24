@@ -4,15 +4,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Codex runs lean and predictable: the right agent/prompt triggers the right behavior with minimal friction.
-**Current focus:** Planning next milestone
+**Current focus:** v1.2 Agent-to-Local Feedback Loop
 
 ## Current Position
 
-Phase: 12 of 12 — v1.1 Standardize Selection & Security (COMPLETE)
-Status: Milestone v1.1 shipped
-Last activity: 2026-02-24 — v1.1 milestone completed and archived
-
-Progress: [██████████] 100% (v1.1)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-24 — Milestone v1.2 started
 
 ## Performance Metrics
 
@@ -41,10 +40,10 @@ None.
 
 ### Blockers/Concerns
 
-None — milestone complete.
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: v1.1 milestone completed and archived
+Stopped at: v1.2 milestone initialization
 Resume file: None

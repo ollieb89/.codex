@@ -26,7 +26,10 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 
 ### Active
 
-(None — start next milestone to define)
+- [ ] STDERR recovery bridge — capture dispatch failures and prompt agent for fix suggestions
+- [ ] Incremental context loading — agents inspect command output before generating next selection
+- [ ] Session persistence — maintain last 3 actions as local workspace memory
+- [ ] Agent dry-run validation — simulate commands through dispatcher with sanitized preview before confirmation
 
 ### Out of Scope
 
@@ -40,6 +43,7 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 
 - Shipped v1.0 Numbered CLI Selection UX with safety dispatch and UX polish.
 - Shipped v1.1 Standardize Selection & Security with shared constants, 10-tier secret redaction, and auto-reindexing normalization.
+- v1.2 goal: close the loop between AI agents and local tools — make Selection + Dispatch a live conversation, not a one-shot interaction.
 - Codebase consists of Node.js CLI utilities (CJS), Markdown prompts, and TOML configurations.
 - ~6,600 LOC JS/CJS in `get-shit-done` core.
 - 126 tests passing across dispatcher (88) and selector (38) subsystems.
@@ -69,5 +73,15 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 | Single-chokepoint normalize-then-select | All paths (interactive + headless) get normalized IDs consistently | ✓ Good |
 | Zero external dependencies for v1.1 | Node.js built-ins sufficient; avoids supply chain risk | ✓ Good |
 
+## Current Milestone: v1.2 Agent-to-Local Feedback Loop
+
+**Goal:** Close the loop between AI agents and local tools — Selection + Dispatch becomes a live conversation with error recovery, context awareness, session memory, and dry-run validation.
+
+**Target features:**
+- STDERR Recovery Bridge
+- Incremental Context Loading
+- Session Persistence
+- Agent Dry-Run Validation
+
 ---
-*Last updated: 2026-02-24 after v1.1 milestone*
+*Last updated: 2026-02-24 after v1.2 milestone started*
