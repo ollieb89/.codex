@@ -7,10 +7,10 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 **Current focus:** Planning next milestone
 
 ## Current Position
-- Phase: Ready — Planning
+- Phase: Not started (defining requirements)
 - Plan: —
-- Status: Milestone v1.0 complete, archived
-- Last activity: 2026-02-24 — Archived v1.0 Numbered CLI Selection UX
+- Status: Defining requirements
+- Last activity: 2026-02-24 — Milestone v1.1.0 started
 
 ## Progress
 - Phases total: 3 (v1.0 complete)

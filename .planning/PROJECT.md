@@ -21,7 +21,20 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 
 ### Active
 
-(Planning next milestone)
+- Standardize Numbered CLI Selection UX (InputSelector refinements, auto-reindexing, 0-to-exit)
+- Secure Dispatcher safety layer (workspace boundaries, destructive command highlighting, secret redaction)
+- Headless integration (support for --select flag and GS_DONE_SELECT env var)
+- UI Polish (truncation rules and Unicode-aware padding)
+
+## Current Milestone: v1.1.0 Standardize Selection & Security
+
+**Goal:** Standardize the CLI selection experience and implement a secure dispatch layer for safe tool execution.
+
+**Target features:**
+- Numbered Selection Logic (InputSelector refinements)
+- Secure Dispatcher (Safety layer & secret redaction)
+- Headless Integration (--select flag support)
+- UI Polish (Unicode padding & truncation)
 
 ### Out of Scope
 
