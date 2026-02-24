@@ -35,7 +35,7 @@ For full phase details, see: [.planning/milestones/v1.1-ROADMAP.md](milestones/v
 **Milestone Goal:** Close the loop between AI agents and local tools — Selection + Dispatch becomes a live conversation with error recovery, context awareness, session memory, and dry-run validation.
 
 - [x] **Phase 13: Foundation** - Build session store and STDERR bridge as standalone, independently-tested leaf modules (completed 2026-02-24)
-- [ ] **Phase 14: Dispatcher Integration** - Wire recovery bridge and session store into dispatchSelection; structured return shape
+- [x] **Phase 14: Dispatcher Integration** - Wire recovery bridge and session store into dispatchSelection; structured return shape
 - [ ] **Phase 15: Dry-Run Validation** - Structured DryRunResult, --force scoping fix, and fidelity test coverage
 - [ ] **Phase 16: Context Envelope** - Context return fields with 2KB cap and redaction on every dispatchSelection call
 
@@ -65,11 +65,11 @@ Plans:
   2. Choosing "Retry" or "Edit" re-enters `dispatchSelection` with full sanitization — no shortcut runner path
   3. After 2 failed recovery attempts for the same root cause, dispatch hard-stops with an abort message
   4. Every dispatch (success or failure) appends a sanitized record to session store; a session write error never crashes the dispatch
-**Plans**: 2 planned
+**Plans**: 2/2 completed
 
 Plans:
-- [ ] 14-01-PLAN.md — Recovery prompt helpers and root-cause detection
-- [ ] 14-02-PLAN.md — Dispatcher recovery loop with session logging and strike limit
+- [x] 14-01-PLAN.md — Recovery prompt helpers and root-cause detection
+- [x] 14-02-PLAN.md — Dispatcher recovery loop with session logging and strike limit
 
 ### Phase 15: Dry-Run Validation
 **Goal**: `dispatchSelection` with `dryRun: true` returns a structured `DryRunResult` that accurately reflects the actual execution path
@@ -102,7 +102,7 @@ Plans:
 | 11. Secure Dispatcher | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 12. Selection Normalization | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 13. Foundation | 2/2 | Complete    | 2026-02-24 | - |
-| 14. Dispatcher Integration | v1.2 | 1/2 | In Progress | - |
+| 14. Dispatcher Integration | v1.2 | 2/2 | Complete | 2026-02-24 |
 | 15. Dry-Run Validation | v1.2 | 0/? | Not started | - |
 | 16. Context Envelope | v1.2 | 0/? | Not started | - |
 
