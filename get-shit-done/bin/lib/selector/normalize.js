@@ -13,12 +13,26 @@ function stripAnsi(input) {
   );
 }
 
+/**
+ * Strip markdown formatting from numbered line prefixes only.
+ * Preserves label text intact (SEL-02).
+ * Handles: **1.** text, `1.` text, *1.* text
+ * Does NOT strip markdown from the label portion.
+ * @param {string} input raw text
+ * @returns {string} text with number prefixes cleaned
+ */
 function stripSimpleMarkdown(input) {
   return input
-    .replace(/[*`_-]{1,2}/g, '')
-    .replace(/^\s*[-*+]\s+/gm, '')
-    .replace(/\s+$/gm, '')
-    .trim();
+    .split(/\r?\n/)
+    .map(line => {
+      const trimmed = line.trim();
+      // Strip bold/italic/backtick wrapping around number prefix only
+      // e.g., "**1.** Bold option" -> "1. Bold option"
+      // e.g., "`1.` Code option" -> "1. Code option"
+      // e.g., "*1.* Italic option" -> "1. Italic option"
+      return trimmed.replace(/^(?:\*{1,2}|`)?(0*\d+\.)(?:\*{1,2}|`)?\s/, '$1 ');
+    })
+    .join('\n');
 }
 
 function parseJsonOptions(raw) {
@@ -57,7 +71,7 @@ function parseNumberedLines(raw) {
   const lines = raw.split(/\r?\n/).map(l => l.trim());
   const filtered = lines.filter(l => VALID_NUMBERED_LINE.test(l));
   return filtered.map(line => {
-    const match = line.match(/^(\d+)\.\s+(.+)$/);
+    const match = line.match(VALID_NUMBERED_LINE);
     const num = Number(match[1]);
     const text = match[2].trim();
     return { num, text };
@@ -90,27 +104,43 @@ class NormalizationError extends Error {
  */
 function normalizeOptions(output, opts = {}) {
   const attempt = opts.attempt ?? 0;
-  const cleaned = stripSimpleMarkdown(stripAnsi(output || ''));
+  const canRetry = attempt < RETRY_BUDGET;
 
-  // Try JSON path first
-  let entries = parseJsonOptions(cleaned);
+  // Strip ANSI first, then clean markdown from number prefixes only
+  const ansiCleaned = stripAnsi(output || '');
+
+  // Try JSON path first (no markdown stripping needed for JSON)
+  let entries = parseJsonOptions(ansiCleaned);
 
   if (!entries || entries.length === 0) {
-    // Fallback to numbered text
+    // Strip markdown prefixes before parsing numbered lines
+    const cleaned = stripSimpleMarkdown(ansiCleaned);
     entries = parseNumberedLines(cleaned);
   }
 
   if (!entries || entries.length === 0) {
+    if (!canRetry) {
+      throw new NormalizationError(
+        `Selection failed: could not parse valid options after ${RETRY_BUDGET + 1} attempts. Raw output was: ${(output || '').slice(0, 100)}. This is usually an AI formatting issue -- try running again.`,
+        { retry: false, hint: EMPTY_HINT }
+      );
+    }
     throw new NormalizationError(
       'No valid numbered options found.',
-      { retry: attempt < RETRY_BUDGET, hint: EMPTY_HINT }
+      { retry: true, hint: EMPTY_HINT }
     );
   }
 
   if (hasDuplicates(entries)) {
+    if (!canRetry) {
+      throw new NormalizationError(
+        `Selection failed: could not parse valid options after ${RETRY_BUDGET + 1} attempts. Raw output was: ${(output || '').slice(0, 100)}. This is usually an AI formatting issue -- try running again.`,
+        { retry: false, hint: DUPLICATE_HINT }
+      );
+    }
     throw new NormalizationError(
       'Duplicate numbered options detected.',
-      { retry: attempt < RETRY_BUDGET, hint: DUPLICATE_HINT }
+      { retry: true, hint: DUPLICATE_HINT }
     );
   }
 

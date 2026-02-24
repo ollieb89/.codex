@@ -42,12 +42,12 @@ test('duplicate numbers trigger retryable error', () => {
   );
 });
 
-test('empty after filtering triggers retryable error then hard fail', () => {
+test('empty after filtering triggers retryable error then hard fail at budget', () => {
   const output = `No list here`;
   const first = () => normalizeOptions(output, { attempt: 0 });
-  const second = () => normalizeOptions(output, { attempt: 1 });
+  const atBudget = () => normalizeOptions(output, { attempt: 2 });
   assert.throws(first, (err) => err instanceof NormalizationError && err.retry === true);
-  assert.throws(second, (err) => err instanceof NormalizationError && err.retry === false);
+  assert.throws(atBudget, (err) => err instanceof NormalizationError && err.retry === false);
 });
 
 test('single option sets singleOption true', () => {
