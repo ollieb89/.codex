@@ -50,18 +50,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| SEL-01 | — | Pending |
-| SEL-02 | — | Pending |
-| SEL-03 | — | Pending |
+| SEC-01 | Phase 11 | Pending |
+| SEC-02 | Phase 11 | Pending |
+| SEC-03 | Phase 10 | Pending |
+| SEL-01 | Phase 12 | Pending |
+| SEL-02 | Phase 12 | Pending |
+| SEL-03 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6 ⚠️
+- Mapped to phases: 6
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 — traceability mapped during v1.1 roadmap creation*
