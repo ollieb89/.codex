@@ -1,9 +1,11 @@
 const readline = require('node:readline');
+const path = require('node:path');
 const { exec } = require('node:child_process');
 const { sanitizeAction } = require('./sanitize');
 const { editCommand } = require('./edit');
 const { renderPreview, confirm } = require('./preview');
 const { MUTATING_PATTERN } = require('./commands');
+const { appendRecord } = require('../session/store');
 
 function defaultRunner(action) {
   return new Promise((resolve, reject) => {
@@ -32,6 +34,7 @@ async function dispatchSelection(selection, opts = {}) {
   const forceFlag = opts.forceDispatchFlag || false;
   const dryRun = opts.dryRun || false;
   const cwd = opts.cwd || process.cwd();
+  const sessionPath = opts.sessionPath || path.join(cwd, '.planning', 'session.json');
 
   if (!selection || selection.actionable === false) {
     return { ran: false, cancelled: true, reason: 'Non-actionable' };
@@ -97,7 +100,22 @@ async function dispatchSelection(selection, opts = {}) {
   }
 
   const res = await runner({ ...action, command: action.command });
+  try {
+    appendRecord(sessionPath, {
+      command: action.command,
+      exitCode: res.code,
+      stderrSnippet: getStderrSnippet(res.stderr),
+    });
+  } catch (_err) {
+    // Session writes are best-effort; swallow per Phase 13 decision
+  }
   return { ran: true, dryRun: false, result: res };
+}
+
+function getStderrSnippet(stderr = '') {
+  if (!stderr) return '';
+  const lines = String(stderr).split('\n');
+  return lines.slice(-7).join('\n').trim();
 }
 
 module.exports = {
