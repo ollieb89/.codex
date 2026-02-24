@@ -1,34 +1,97 @@
-# Features Research — Codex Base Optimization
+# Feature Research
 
-**Goal:** Clarify the functional areas to optimize in the Codex toolkit.
+**Domain:** Numbered CLI selection UX for AI-assisted workflows  
+**Researched:** 2026-02-24  
+**Confidence:** HIGH
 
-## Table Stakes (must-have)
+## Feature Landscape
 
-- Prompt/command consistency: commands and prompts stay in sync (names, flags, includes)
-- Agent guide coherence: MODE_*.md and agents/*.md align with RULES/PRINCIPLES defaults
-- Workflow reliability: new-project/map-codebase/test flows produce artifacts without manual fixes
-- Secret hygiene: guidance and templates avoid leaking keys; scans documented
-- Skills determinism: scripts pin versions and validate environment before scaffolding
+### Table Stakes (Users Expect These)
 
-## Differentiators
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Numbered AI output schema (1–N, no filler) | Enables deterministic parsing and display | LOW | Enforce via system prompt snippet and validation guard |
+| Input selector helper (render + parse) | Core UX for picking an option quickly | LOW | Should accept list of strings/objects and return selection |
+| Zero-to-exit and input validation | Prevent crashes and allow quick cancel | LOW | Catch non-numeric, out-of-range; 0 returns gracefully |
+| Action dispatch on selection | Users expect the pick to do something immediately | MEDIUM | Map numbers to actions (commands/diffs); include dry-run flag |
 
-- Pre-flight validation suite (TOML/Markdown checks) integrated into docs or hooks
-- MCP server pinning and health checks before use
-- Traceability updates auto-ensured between REQUIREMENTS.md and ROADMAP.md
-- UX polish: clearer banners, next-step blocks, and reduced noisy prompts
+### Differentiators (Competitive Advantage)
 
-## Anti-Features / Out of Scope
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Colorized numbering and concise layout | Faster scanning under time pressure | LOW | Optional colorette; keep monochrome fallback |
+| Multi-source normalization (JSON or numbered text) | Works across different agent outputs | MEDIUM | Try JSON parse first; fall back to regex numbered lines |
+| Safety interlocks (preview before execute) | Avoid accidental destructive runs | MEDIUM | Require confirmation for shell/diff actions; show summary |
 
-- Building new product features beyond Codex internals
-- Adding heavy CI/CD pipelines; keep lightweight local validation
+### Anti-Features (Commonly Problematic)
 
-## Complexity Notes
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Free-form conversational responses | “Feels natural” | Breaks parsing; inconsistent numbering | Enforce schema with hard guardrails |
+| Heavy TUI navigators (search, paging) | “More control” | Adds deps, fails in headless runs | Simple numbered list with optional color |
+| Auto-execute without confirmation | “Speed” | Risky for file/system changes | Require confirm for destructive ops; allow silent for read-only |
 
-- Syncing prompts/commands requires cross-file checks but low technical complexity
-- Skill determinism may require adjusting scripts and adding lockfiles (medium complexity)
-- Adding validation hooks needs careful non-intrusive defaults
+## Feature Dependencies
 
-## Dependencies
+```
+AI Output Schema
+    └──feeds──> Selector Helper (render/parse)
+                     └──drives──> Action Dispatcher
+                                └──requires──> Safety Interlocks (confirm/dry-run)
+```
 
-- Node runtime; git available
-- Optional tools: python for tomllib, rg installed
+### Dependency Notes
+
+- Schema must be enforced before selector; garbage in = garbage out.
+- Dispatcher relies on selector returning structured result (id, text, payload).
+- Safety interlocks wrap dispatcher whenever action mutates FS/shell.
+
+## MVP Definition
+
+### Launch With (v1)
+
+- [ ] Enforced numbered list schema in prompts/agents
+- [ ] Selector helper (render, parse, returns selection)
+- [ ] Zero-to-exit + validation
+- [ ] Action dispatch with optional confirmation and dry-run for shell/diff
+
+### Add After Validation (v1.x)
+
+- [ ] Colorized output + width-aware truncation
+- [ ] JSON-structured AI output path with schema validation
+- [ ] Selector telemetry/log hooks (for debugging choices)
+
+### Future Consideration (v2+)
+
+- [ ] Multi-select or fuzzy search
+- [ ] Pagination for very long lists
+- [ ] Configurable keybindings beyond numbers
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Numbered schema enforcement | HIGH | LOW | P1 |
+| Selector helper | HIGH | LOW | P1 |
+| Zero-to-exit + validation | HIGH | LOW | P1 |
+| Action dispatch + safety interlocks | HIGH | MEDIUM | P1 |
+| Colorized output | MEDIUM | LOW | P2 |
+| JSON normalization | MEDIUM | MEDIUM | P2 |
+| Telemetry/log hooks | LOW | LOW | P3 |
+
+## Competitor Feature Analysis
+
+| Feature | Copilot CLI | Aider | Our Approach |
+|---------|-------------|-------|--------------|
+| Numbered list output | Yes, but verbose context | Yes, adds file selection | Strict schema, minimal filler |
+| Selector UX | Arrow keys + numbers | Numbers + file chat | Numbers-first, 0-to-exit, fast render |
+| Action safety | Often asks confirmation | Applies patches after prompt | Require confirm for mutating actions; dry-run available |
+
+## Sources
+
+- Observed behaviors from Copilot CLI, Aider, ShellGPT number-selection flows
+- Internal prompt patterns from Codex agents (need schema tightening)
+
+---
+*Feature research for: Numbered CLI selection UX*  
+*Researched: 2026-02-24*

@@ -1,37 +1,139 @@
-# Architecture Research — Codex Base Optimization
+# Architecture Research
 
-**Current structure:** Monolithic local toolkit: Markdown/TOML guidance, CommonJS utilities (`get-shit-done/bin/lib/*.cjs`), templates, skills scripts.
+**Domain:** Numbered CLI selection UX for AI-assisted workflows  
+**Researched:** 2026-02-24  
+**Confidence:** HIGH
 
-## Recommended Component Boundaries
+## Standard Architecture
 
-- **Guidance Layer:** `CODEX.md`, `RULES.md`, `PRINCIPLES.md`, `MODE_*.md`, `AGENTS.md` — source of truth; ensure includes resolve
-- **Command/Prompt Layer:** `commands/**/*.toml`, `prompts/**/*.toml` — mirrored pairs; validate names/flags/mcp-servers alignment
-- **Runtime Layer:** `get-shit-done/bin/gsd-tools.cjs` + `bin/lib/*.cjs` — utilities for init, state, roadmap, commit; add guardrails and version hints
-- **Templates/Workflows:** `get-shit-done/templates/**`, `get-shit-done/workflows/**` — ensure references intact and up to date
-- **Skills:** `skills/**` — isolated scripts; pin dependencies and add environment checks
-- **Operational Data:** `.planning/`, `sessions/`, `logs/`, `backups/` — keep paths and permissions safe
+### System Overview
+
+```
+┌──────────────────────────────────────────────┐
+│                 Prompts Layer                │
+│  • System prompt enforces numbered schema    │
+│  • Agent wrappers validate/normalize output  │
+└───────────────┬──────────────────────────────┘
+                │ numbered options
+┌───────────────▼──────────────────────────────┐
+│              Selector Helper                 │
+│  • Renders numbered list                     │
+│  • Parses input (int, 0-to-exit)             │
+│  • Returns {index, label, payload}           │
+└───────────────┬──────────────────────────────┘
+                │ selection event
+┌───────────────▼──────────────────────────────┐
+│             Action Dispatcher                │
+│  • Maps selection → action (cmd/diff/flow)   │
+│  • Applies safety interlocks (confirm/dry)   │
+└───────────────┬──────────────────────────────┘
+                │ result/feedback
+┌───────────────▼──────────────────────────────┐
+│              Logging/Telemetry               │
+│  • Optional audit of options + pick          │
+└──────────────────────────────────────────────┘
+```
+
+### Component Responsibilities
+
+| Component | Responsibility | Typical Implementation |
+|-----------|----------------|------------------------|
+| Prompt Schema | Force numbered output, no filler | System prompt snippet + post-check for `^\d+\.` lines |
+| Normalizer | Convert AI output to array of {label,payload} | Try JSON parse; else regex numbered lines |
+| Selector | Render list, accept numeric input with 0-exit | readline wrapper with validation + optional color |
+| Dispatcher | Execute mapped action with safety | Switch on action type (shell/diff/flow); confirm for mutating ops |
+| Logger | Record options/selection for debugging | Optional write to stdout/log file when enabled |
+
+## Recommended Project Structure
+
+```
+get-shit-done/
+└── bin/lib/
+    ├── prompts/           # prompt snippets (numbered schema)
+    ├── selector.js        # render/parse helper
+    ├── dispatcher.js      # action routing + safety
+    └── utils/parse.js     # normalization (JSON or numbered text)
+```
+
+### Structure Rationale
+
+- Keep selector/dispatcher isolated so commands can import without duplication.
+- Prompt snippets live alongside other shared prompt text for consistency.
+- Parsing utilities separated to enable unit tests and reuse in agents or CLI.
+
+## Architectural Patterns
+
+### Pattern 1: Schema-first prompt + post-validate
+
+**What:** Enforce numbered list via system prompt and reject if pattern missing.  
+**When to use:** Any AI-generated option list.  
+**Trade-offs:** Adds one validation branch but prevents downstream crashes.
+
+### Pattern 2: Dual-path normalization (JSON → text)
+
+**What:** Prefer JSON array if present; else parse numbered lines.  
+**When to use:** Mixed agents/models that sometimes return JSON.  
+**Trade-offs:** Slight overhead; improves robustness.
+
+### Pattern 3: Safety-interlocked dispatcher
+
+**What:** Wrap execution with confirm/dry-run for mutating actions.  
+**When to use:** Shell commands, patch application.  
+**Trade-offs:** Adds extra prompt; necessary to avoid accidental damage.
 
 ## Data Flow
 
-- Commands/prompts feed agents → runtime helpers write artifacts to `.planning/`
-- Workflows reference templates and rules; state tracked in `.planning/STATE.md`
-- Skills run externally; rely on scripts and local tools
+```
+[AI output] → Normalizer → Selector (render/input) → Dispatcher → [Action result]
+                               │
+                               └→ 0 → exit/return
+```
 
-## Build Order / Optimization Order
+## Scaling Considerations
 
-1) Stabilize guidance (RULES/PRINCIPLES/MODE/AGENTS) and includes
-2) Align commands ↔ prompts metadata
-3) Harden runtime helpers (init, commit, map-codebase, new-project)
-4) Pin skill scripts and add validation
-5) Add lightweight validation scripts/docs (TOML/Markdown, secret scan)
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| Few options | Simple render; no pagination needed |
+| Many options (50+) | Add truncation/paging hooks; allow filter flag |
+| Headless/CI | Support preselected number via flag/env; skip readline |
 
-## Cross-Cutting Concerns
+### Scaling Priorities
 
-- Version pinning for MCP servers and skill dependencies
-- Secret hygiene in templates and docs
-- Deterministic search/tools (`rg`, python tomllib)
+1. First bottleneck: long option text wrapping → add truncation + full-text on demand.  
+2. Second bottleneck: accidental execution → keep confirmation for mutating actions.
 
-## Confidence
+## Anti-Patterns
 
-- Boundary mapping: High
-- Build/optimization order: Medium-High
+### Anti-Pattern 1: Trusting conversational output
+
+**Why it's wrong:** Non-deterministic; breaks parsing.  
+**Do this instead:** Hard schema + validation + retry/fallback.
+
+### Anti-Pattern 2: Coupling selector to a single command
+
+**Why it's wrong:** Duplicated logic across workflows.  
+**Do this instead:** Export reusable helper and dispatcher.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| None required | N/A | Keep offline; no external APIs needed |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| Prompts ↔ Selector | Text/JSON options | Selector should not care about agent identity |
+| Selector ↔ Dispatcher | Struct `{index,label,payload}` | Payload may hold command/diff identifiers |
+
+## Sources
+
+- Copilot CLI, Aider selection flows (behavioral reference)
+- Existing Codex CLI patterns for prompts and CJS helpers
+
+---
+*Architecture research for: Numbered CLI selection UX*  
+*Researched: 2026-02-24*
