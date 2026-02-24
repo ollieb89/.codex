@@ -51,7 +51,10 @@ Plans:
   2. Secret patterns are applied in specific-to-generic order so provider-prefixed secrets are caught before the generic fallback fires
   3. Benign values (`TOKEN_COUNT=5`, file paths containing keyword substrings) are not redacted in previews
   4. The original, unredacted command is what `child_process.exec` receives — redaction affects display only
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 11-01-PLAN.md — Define SECRET_PATTERNS ordered array and isSafeValue helper in commands.js with tests
+- [ ] 11-02-PLAN.md — Refactor redactSecrets() in sanitize.js to use SECRET_PATTERNS with comprehensive tests
 
 ### Phase 12: Selection Normalization
 **Goal**: AI-generated numbered lists are always presented as a clean 1..N sequence before any render or headless resolution, regardless of gaps or non-standard source numbering
@@ -72,7 +75,7 @@ Plans:
 | 8. Safe Dispatch | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 9. UX Polish & Headless | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 10. Shared Command Policy Foundation | 2/2 | Complete   | 2026-02-24 | - |
-| 11. Secure Dispatcher | v1.1 | 0/? | Not started | - |
+| 11. Secure Dispatcher | v1.1 | 0/2 | Planned | - |
 | 12. Selection Normalization | v1.1 | 0/? | Not started | - |
 
 ---
