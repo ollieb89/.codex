@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A focused effort to optimize the Codex local toolkit (prompts, agents, skills, workflows) for faster, safer, and more consistent operations. Targets: clearer prompts, streamlined agent behaviors, and tuned skills/scripts for reliability.
+A focused effort to optimize the Codex local toolkit (prompts, agents, skills, workflows) for faster, safer, and more consistent operations. Features a numbered CLI selection UX with safety dispatch, secret redaction, and auto-reindexing normalization.
 
 ## Core Value
 
@@ -18,41 +18,39 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 - ✓ Link selections to Codex actions (execute command/apply diff) with safety dispatch — v1.0
 - ✓ Width-aware truncation and Unicode-aware alignment — v1.0
 - ✓ Headless preselection support for scripts and CI — v1.0
+- ✓ Shared commands.js constants module as single source of truth — v1.1
+- ✓ Provider-specific secret redaction with specific-to-generic ordering — v1.1
+- ✓ Auto-reindexing normalization for AI-generated numbered lists — v1.1
+- ✓ Label text and metadata preservation during normalization — v1.1
+- ✓ Headless --select resolves post-normalization IDs — v1.1
 
 ### Active
 
-- Standardize Numbered CLI Selection UX (InputSelector refinements, auto-reindexing, 0-to-exit)
-- Secure Dispatcher safety layer (workspace boundaries, destructive command highlighting, secret redaction)
-- Headless integration (support for --select flag and GS_DONE_SELECT env var)
-- UI Polish (truncation rules and Unicode-aware padding)
-
-## Current Milestone: v1.1.0 Standardize Selection & Security
-
-**Goal:** Standardize the CLI selection experience and implement a secure dispatch layer for safe tool execution.
-
-**Target features:**
-- Numbered Selection Logic (InputSelector refinements)
-- Secure Dispatcher (Safety layer & secret redaction)
-- Headless Integration (--select flag support)
-- UI Polish (Unicode padding & truncation)
+(None — start next milestone to define)
 
 ### Out of Scope
 
 - Adding new product features unrelated to Codex internals — focus is internal optimization
 - Building new external integrations — only existing MCP servers/settings are considered
+- Fuzzy/substring match for --select — non-deterministic; breaks CI pipelines silently
+- Entropy-based secret detection — high false-positive rate on base64/hash content
+- Interactive TUI arrow-key navigation — fails in headless/SSH; numbered list is always compatible
 
 ## Context
 
 - Shipped v1.0 Numbered CLI Selection UX with safety dispatch and UX polish.
+- Shipped v1.1 Standardize Selection & Security with shared constants, 10-tier secret redaction, and auto-reindexing normalization.
 - Codebase consists of Node.js CLI utilities (CJS), Markdown prompts, and TOML configurations.
-- Safety dispatch layer includes strict workspace boundary and secret redaction.
 - ~6,600 LOC JS/CJS in `get-shit-done` core.
+- 126 tests passing across dispatcher (88) and selector (38) subsystems.
+- Tech debt: `ps aux` exposes secrets in CLI arguments (accepted limitation).
 
 ## Constraints
 
 - **Stack**: Keep current Node.js/CJS structure; avoid major rewrites.
 - **Determinism**: Prefer pinned versions/configs where possible to reduce drift.
 - **Security**: Strict workspace boundary (CWD) and automated secret redaction in previews.
+- **Dependencies**: Zero external runtime dependencies — all features use Node.js built-ins only.
 
 ## Key Decisions
 
@@ -60,10 +58,16 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 |----------|-----------|---------|
 | Use auto mode with standard depth | Faster end-to-end planning with balanced quality/cost | ✓ Good |
 | Prioritize internal optimizations over new features | Focus effort on reliability and clarity of existing toolkit | ✓ Good |
-| Strict numbered schema (1–N) | Enables deterministic parsing and re-indexing of agent outputs | ✓ Good |
+| Strict numbered schema (1-N) | Enables deterministic parsing and re-indexing of agent outputs | ✓ Good |
 | Payload-first execution contract | Ensures consistent behavior between interactive and headless flows | ✓ Good |
 | Strict CWD workspace boundary | Mitigates risk of AI hallucinating paths outside project scope | ✓ Good |
 | Secret redaction in previews | Prevents credential leakage during screen-sharing or logs | ✓ Good |
+| Shared commands.js constants module | Single source of truth eliminates drift between dispatcher files | ✓ Good |
+| Ordered secret patterns (specific-to-generic) | Prevents prefix collisions (e.g., sk-ant- vs sk-) | ✓ Good |
+| Safe-value detection for generic fallback | Prevents false positives on numerics, file paths, short strings | ✓ Good |
+| Prefix-only markdown stripping in normalizer | Preserves label text integrity while cleaning number prefixes | ✓ Good |
+| Single-chokepoint normalize-then-select | All paths (interactive + headless) get normalized IDs consistently | ✓ Good |
+| Zero external dependencies for v1.1 | Node.js built-ins sufficient; avoids supply chain risk | ✓ Good |
 
 ---
-*Last updated: 2026-02-24 after v1.0 milestone*
+*Last updated: 2026-02-24 after v1.1 milestone*
