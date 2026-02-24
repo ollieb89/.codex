@@ -1,71 +1,52 @@
-# Requirements: Codex Base Optimization
+# Requirements: Codex Base Optimization — Numbered CLI Selection UX
 
-**Defined:** 2026-02-24
+**Defined:** 2026-02-24  
 **Core Value:** Codex runs lean and predictable: the right agent/prompt triggers the right behavior with minimal friction.
 
 ## v1 Requirements
 
-### Guidance
-- [ ] **GUID-01**: `CODEX.md` includes correct paths to FLAGS, PRINCIPLES, RULES, MODE files
-- [ ] **GUID-02**: MODE_*.md and agents/*.md are coherent and deduplicated against RULES/PRINCIPLES
-- [ ] **GUID-03**: AGENTS/MODE docs clearly map to command usage
+### Schema
 
-### Commands & Prompts
-- [ ] **CMDS-01**: `commands/**/*.toml` align with corresponding `prompts/**/*.toml` (names, flags, mcp-servers)
-- [ ] **CMDS-02**: TOML validates via `python -m tomllib` with no errors
-- [ ] **CMDS-03**: Prompts reference correct templates/includes
+- [ ] **SCH-01**: System prompts/agents enforce numbered option output (`1.`…`N.`), no filler text, and reject/normalize outputs that do not match.
+- [ ] **SCH-02**: Normalizer accepts JSON array outputs when present and falls back to numbered-text parsing; sanitizes ANSI/markdown artifacts before parsing.
 
-### Runtime & Workflows
-- [ ] **FLOW-01**: `get-shit-done/bin/lib/*.cjs` have guardrails for missing state/config and clear errors
-- [ ] **FLOW-02**: `new-project` and `map-codebase` workflows run end-to-end without manual patching
-- [ ] **FLOW-03**: Traceability updates REQUIREMENTS ↔ ROADMAP automatically or with documented steps
+### Selector
 
-### Skills
-- [ ] **SKILL-01**: Skill scripts pin required tool versions (pnpm/Vite/Tailwind/etc.)
-- [ ] **SKILL-02**: Skill scripts include environment preflight checks with actionable errors
+- [ ] **SEL-01**: InputSelector renders options as a numbered list, reserves `0` as a cancel/exit, rejects non-numeric and out-of-range inputs, and returns structured `{index,label,payload}`.
+- [ ] **SEL-02**: Selector handles long/wide labels with truncation/alignment (including wide Unicode), and supports colorized numbers with a no-color fallback.
 
-### Hygiene
-- [ ] **SAFE-01**: Secret hygiene guidance present; secret scan instructions included
-- [ ] **SAFE-02**: Add `.nvmrc` (Node 20) and, if applicable, minimal `package.json` for pinning MCP server versions
+### Safety
+
+- [ ] **SAF-01**: Dispatcher maps selections to actions (shell command, diff apply, or workflow step) and requires preview/confirmation plus dry-run for mutating actions.
+- [ ] **SAF-02**: Dispatcher sanitizes/allowlists payloads (commands/paths) to prevent unsafe execution and blocks actions outside the workspace.
+
+### Automation UX
+
+- [ ] **UX-01**: Non-interactive/headless mode accepts a preselected number via flag/env, logs options and selection for audit, and exits cleanly on `0`.
 
 ## v2 Requirements
 
-### Enhancements
-- **ENH-01**: Optional validation script for Markdown linting/shellcheck
-- **ENH-02**: Optional MCP health-check helper before launches
+(None yet — add post-v1 learnings)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| New external integrations | Focus is internal optimization |
-| Heavy CI/CD pipelines | Keep tooling lightweight and local |
+| Heavy TUI frameworks (blessed/ink) | Overkill for simple selection; brittle in headless/CI |
+| Auto-execute without confirmation for mutating actions | Safety risk; keep human-in-the-loop |
+| Multi-select/fuzzy search/pagination | Defer until v1 flow is validated |
+| Free-form conversational outputs | Break deterministic parsing; enforce schema instead |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GUID-01 | Phase 1 | Pending |
-| GUID-02 | Phase 1 | Pending |
-| GUID-03 | Phase 1 | Pending |
-| CMDS-01 | Phase 2 | Pending |
-| CMDS-02 | Phase 2 | Pending |
-| CMDS-03 | Phase 2 | Pending |
-| FLOW-01 | Phase 3 | Pending |
-| FLOW-02 | Phase 3 | Pending |
-| FLOW-03 | Phase 3 | Pending |
-| SKILL-01 | Phase 4 | Pending |
-| SKILL-02 | Phase 4 | Pending |
-| SAFE-01 | Phase 5 | Pending |
-| SAFE-02 | Phase 5 | Pending |
-| ENH-01 | Phase 6 | Pending |
-| ENH-02 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 12 total
-- Mapped to phases: 12
-- Unmapped: 0 ✓
+- v1 requirements: 7 total
+- Mapped to phases: 0
+- Unmapped: 7 ⚠️
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initialization*
+*Last updated: 2026-02-24 after defining milestone scope*
