@@ -15,9 +15,9 @@ Requirements for v1.1.0 Standardize Selection & Security. Each maps to roadmap p
 
 ### Selection Normalization
 
-- [ ] **SEL-01**: AI-generated numbered lists are normalized to contiguous 1..N IDs before render, regardless of source numbering
-- [ ] **SEL-02**: Normalizer preserves original label text and metadata while reassigning IDs
-- [ ] **SEL-03**: `--select` flag and `GS_DONE_SELECT` reference post-normalization IDs consistently
+- [x] **SEL-01**: AI-generated numbered lists are normalized to contiguous 1..N IDs before render, regardless of source numbering
+- [x] **SEL-02**: Normalizer preserves original label text and metadata while reassigning IDs
+- [x] **SEL-03**: `--select` flag and `GS_DONE_SELECT` reference post-normalization IDs consistently
 
 ## Future Requirements
 
@@ -53,9 +53,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-01 | Phase 11 | Complete |
 | SEC-02 | Phase 11 | Complete |
 | SEC-03 | Phase 10 | Complete |
-| SEL-01 | Phase 12 | Pending |
-| SEL-02 | Phase 12 | Pending |
-| SEL-03 | Phase 12 | Pending |
+| SEL-01 | Phase 12 | Complete |
+| SEL-02 | Phase 12 | Complete |
+| SEL-03 | Phase 12 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 6 total
@@ -64,4 +64,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 — SEC-01, SEC-02, SEC-03 completed*
+*Last updated: 2026-02-24 — All v1.1 requirements completed (SEC-01, SEC-02, SEC-03, SEL-01, SEL-02, SEL-03)*

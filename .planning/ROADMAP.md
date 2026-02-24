@@ -79,7 +79,7 @@ Plans:
 | 9. UX Polish & Headless | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 10. Shared Command Policy Foundation | 2/2 | Complete   | 2026-02-24 | - |
 | 11. Secure Dispatcher | v1.1 | Complete    | 2026-02-24 | - |
-| 12. Selection Normalization | 2/2 | Complete   | 2026-02-24 | - |
+| 12. Selection Normalization | 2/2 | Complete    | 2026-02-24 | - |
 
 ---
 *For archived requirements, see: [.planning/milestones/v1.0-REQUIREMENTS.md](milestones/v1.0-REQUIREMENTS.md)*
