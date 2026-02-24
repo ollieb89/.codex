@@ -78,7 +78,8 @@ test('redacts AWS access key (AKIA...)', () => {
 });
 
 test('redacts Stripe secret key (sk_live_...)', () => {
-  const { redacted } = redactSecrets('STRIPE_KEY=sk_live_example_key_but_not_real');
+  const fakeStripeKey = `sk_live_${'a'.repeat(24)}`;
+  const { redacted } = redactSecrets(`STRIPE_KEY=${fakeStripeKey}`);
   assert.ok(redacted.includes('[REDACTED]'));
   assert.ok(!redacted.includes('sk_live_'));
 });

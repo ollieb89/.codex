@@ -220,7 +220,8 @@ test('aws pattern matches AKIA followed by 16 uppercase chars', () => {
 test('stripe pattern matches sk_live_ followed by 24+ chars', () => {
   const p = SECRET_PATTERNS.find((x) => x.name === 'stripe');
   const re = new RegExp(p.regex.source, p.regex.flags);
-  assert.ok(re.test('sk_live_example_key_but_not_real'));
+  const fakeStripeKey = `sk_live_${'a'.repeat(24)}`;
+  assert.ok(re.test(fakeStripeKey));
 });
 
 test('pem pattern matches BEGIN/END RSA PRIVATE KEY block', () => {
