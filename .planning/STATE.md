@@ -4,16 +4,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Codex runs lean and predictable: the right agent/prompt triggers the right behavior with minimal friction.
-**Current focus:** v1.2 Agent-to-Local Feedback Loop — Phase 13: Foundation
+**Current focus:** v1.2 Agent-to-Local Feedback Loop — Phase 14: Dispatcher Integration
 
 ## Current Position
 
-Phase: 13 of 16 (Foundation)
-Plan: — of — in current phase
-Status: Ready to plan
-Last activity: 2026-02-24 — Roadmap created for v1.2 (4 phases, 14 requirements mapped)
+Phase: 14 of 16 (Dispatcher Integration)
+Plan: 01 of 02 in current phase
+Status: In Progress
+Last activity: 2026-02-24 — Completed plan 14-01 (recovery prompt helpers + tests)
 
-Progress: [░░░░░░░░░░] 0% (v1.2)
+Progress: [██░░░░░░░░] 20% (v1.2)
 
 ## Performance Metrics
 
@@ -31,8 +31,8 @@ Progress: [░░░░░░░░░░] 0% (v1.2)
 | 12 — Selection Normalization | 2 | 13 min | 6.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 3.5, 3.5, 2.5, 2.5, 6.5 min
-- Trend: Stable
+- Last 5 plans: 3.5, 3.5, 2.5, 2.5, 18 min
+- Trend: Slightly slower (recovery helper build)
 
 ## Accumulated Context
 
@@ -44,6 +44,8 @@ Recent decisions affecting current work:
 - [v1.2 planning]: Session file at `.planning/session.json` (matches workspace memory convention, not `.codex-session/`)
 - [v1.2 planning]: Recovery retry must re-enter `dispatchSelection` — never a direct runner call (security boundary)
 - [v1.2 planning]: `--force` stripping scoped to GSD dispatch flag position only, not user git flags
+- [14-01 execution]: Same-root-cause detection is strict exitCode + command equality; missing prior context counts as new failure
+- [14-01 execution]: Recovery prompt uses checkpoint-style box with numbered Retry/Edit/Abort menu for dispatcher reuse
 
 ### Pending Todos
 
@@ -56,5 +58,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: v1.2 roadmap created — ready to plan Phase 13
+Stopped at: Completed Phase 14 plan 14-01; ready to execute 14-02 dispatcher integration
 Resume file: None

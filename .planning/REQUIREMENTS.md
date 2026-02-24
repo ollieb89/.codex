@@ -10,9 +10,9 @@ Requirements for Agent-to-Local Feedback Loop milestone. Each maps to roadmap ph
 ### Error Recovery
 
 - [ ] **ERR-01**: Dispatcher surfaces stderr content and exit code to output stream on non-zero exit
-- [ ] **ERR-02**: On non-zero exit, dispatcher prompts Retry / Edit (via editCommand) / Abort
+- [x] **ERR-02**: On non-zero exit, dispatcher prompts Retry / Edit (via editCommand) / Abort
 - [ ] **ERR-03**: Recovery retries re-enter dispatchSelection with full sanitization (never bypass safety)
-- [ ] **ERR-04**: Hard stop after 2 failed recovery attempts for same root cause
+- [x] **ERR-04**: Hard stop after 2 failed recovery attempts for same root cause
 
 ### Session Memory
 
@@ -65,9 +65,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ERR-01 | Phase 13 | Pending |
-| ERR-02 | Phase 14 | Pending |
+| ERR-02 | Phase 14 | Complete |
 | ERR-03 | Phase 14 | Pending |
-| ERR-04 | Phase 14 | Pending |
+| ERR-04 | Phase 14 | Complete |
 | SESS-01 | Phase 13 | Pending |
 | SESS-02 | Phase 13 | Pending |
 | SESS-03 | Phase 13 | Pending |
