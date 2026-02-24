@@ -7,14 +7,14 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 **Current milestone:** v1.0 Numbered CLI Selection UX
 
 ## Current Position
-- Phase: Ready — Phase 7 (Schema & Selector)
-- Plan: —
-- Status: Ready to execute
-- Last activity: 2026-02-24 — Milestone v1.0 requirements and roadmap set
+- Phase: In Progress — Phase 9 (UX Polish & Headless)
+- Plan: 09-01-PLAN.md
+- Status: 09-01 complete, starting 09-02
+- Last activity: 2026-02-24 — 09-01 implemented: width-aware formatting and aligned numbering.
 
 ## Progress
 - Phases total: 3 (numbered 7–9)
-- Current phase: 7
+- Current phase: 9
 - Requirements total: 7
 
 ## Decisions
