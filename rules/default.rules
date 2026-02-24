@@ -1,1 +1,2 @@
 prefix_rule(pattern=["node", "/home/ollie/.config/opencode/get-shit-done/bin/gsd-tools.cjs", "commit"], decision="allow")
+prefix_rule(pattern=["rm", "-rf", ".git/refs/original"], decision="allow")
