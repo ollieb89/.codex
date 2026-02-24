@@ -5,6 +5,8 @@ const { sanitizeAction } = require('./sanitize');
 const { editCommand } = require('./edit');
 const { renderPreview, confirm } = require('./preview');
 const { MUTATING_PATTERN } = require('./commands');
+const { buildRecoveryPayload } = require('./stderr-bridge');
+const { renderRecoveryPrompt, RECOVERY_CHOICES, isSameRootCause } = require('./recovery');
 const { appendRecord } = require('../session/store');
 
 function defaultRunner(action) {
@@ -35,6 +37,7 @@ async function dispatchSelection(selection, opts = {}) {
   const dryRun = opts.dryRun || false;
   const cwd = opts.cwd || process.cwd();
   const sessionPath = opts.sessionPath || path.join(cwd, '.planning', 'session.json');
+  const recoveryState = opts._recoveryState || null;
 
   if (!selection || selection.actionable === false) {
     return { ran: false, cancelled: true, reason: 'Non-actionable' };
@@ -109,6 +112,70 @@ async function dispatchSelection(selection, opts = {}) {
   } catch (_err) {
     // Session writes are best-effort; swallow per Phase 13 decision
   }
+  if (res.code === 0) {
+    if (recoveryState) {
+      output.write('Command succeeded\n');
+    }
+    return { ran: true, dryRun: false, result: res };
+  }
+
+  const recoveryPayload = buildRecoveryPayload(res, action.command);
+  if (!recoveryPayload) {
+    return { ran: true, dryRun: false, result: res };
+  }
+
+  const currentFailure = { exitCode: recoveryPayload.exitCode, command: action.command };
+  const strikes = isSameRootCause(currentFailure, recoveryState?.lastFailure)
+    ? (recoveryState?.strikes ?? 0) + 1
+    : 1;
+  const nextRecoveryState = {
+    strikes,
+    lastFailure: currentFailure,
+  };
+
+  if (strikes >= 2) {
+    output.write('Aborting after repeated failure of the same command.\n');
+    return { ran: true, dryRun: false, aborted: true, result: res };
+  }
+
+  renderRecoveryPrompt(recoveryPayload, { output });
+  let choice = await ask('Select an option: ');
+  while (!Object.values(RECOVERY_CHOICES).includes((choice || '').trim())) {
+    choice = await ask('Select an option: ');
+  }
+
+  const trimmed = (choice || '').trim();
+  if (trimmed === RECOVERY_CHOICES.abort) {
+    output.write('Abort selected. Exiting recovery.\n');
+    return { ran: true, dryRun: false, aborted: true, result: res };
+  }
+
+  if (trimmed === RECOVERY_CHOICES.retry) {
+    const selectionForRetry = withCommand(selection, action.command);
+    return dispatchSelection(selectionForRetry, {
+      ...opts,
+      _recoveryState: nextRecoveryState,
+    });
+  }
+
+  if (trimmed === RECOVERY_CHOICES.edit) {
+    const edited = await editCommand(action.command, { input, output, useEditor: opts.useEditor, ask });
+    if (edited.cancelled || !edited.command) {
+      output.write('Abort selected. Exiting recovery.\n');
+      return { ran: true, dryRun: false, aborted: true, result: res };
+    }
+
+    const editedSelection = withCommand(selection, edited.command);
+    const stateForEdit = edited.command === action.command
+      ? nextRecoveryState
+      : { strikes: 0, lastFailure: null };
+
+    return dispatchSelection(editedSelection, {
+      ...opts,
+      _recoveryState: stateForEdit,
+    });
+  }
+
   return { ran: true, dryRun: false, result: res };
 }
 
@@ -116,6 +183,17 @@ function getStderrSnippet(stderr = '') {
   if (!stderr) return '';
   const lines = String(stderr).split('\n');
   return lines.slice(-7).join('\n').trim();
+}
+
+function withCommand(selection, command) {
+  const payload = selection.payload || {};
+  return {
+    ...selection,
+    payload: {
+      ...payload,
+      command,
+    },
+  };
 }
 
 module.exports = {
