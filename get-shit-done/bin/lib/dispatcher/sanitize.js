@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { BLOCKED_COMMANDS, ALLOWLIST, matchGray } = require('./commands');
+const { BLOCKED_COMMANDS, ALLOWLIST, matchGray, SECRET_PATTERNS, isSafeValue } = require('./commands');
 
 function resolveReal(p, cwd) {
   const absolute = path.resolve(cwd, p);
@@ -36,13 +36,28 @@ function detectPaths(action = {}) {
 
 function redactSecrets(str) {
   const replacements = [];
-  const redacted = str.replace(
-    /\b([A-Z0-9_]*(API_KEY|TOKEN|SECRET))=([^\s]+)/g,
-    (_m, key, _suffix, value) => {
-      replacements.push({ key, original: value });
-      return `${key}=[REDACTED]`;
-    },
-  );
+  let redacted = str;
+
+  for (const pattern of SECRET_PATTERNS) {
+    // Create fresh regex to avoid /g lastIndex state issues
+    const re = new RegExp(pattern.regex.source, pattern.regex.flags);
+
+    if (pattern.name === 'generic_env') {
+      // Generic fallback: extract key and value, check if safe
+      redacted = redacted.replace(re, (match, key, _suffix, value) => {
+        if (!pattern.alwaysRedact && isSafeValue(value)) return match;
+        replacements.push({ key, original: value });
+        return `${key}=[REDACTED]`;
+      });
+    } else {
+      // Provider/structured patterns: replace entire match with [REDACTED]
+      redacted = redacted.replace(re, (match) => {
+        replacements.push({ key: pattern.name, original: match });
+        return '[REDACTED]';
+      });
+    }
+  }
+
   return { redacted, replacements };
 }
 
