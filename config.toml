@@ -1,0 +1,29 @@
+personality = "pragmatic"
+model = "gpt-5.1-codex-max"
+model_reasoning_effort = "medium"
+[projects."/home/ollie"]
+trust_level = "trusted"
+
+[projects."/home/ollie/Tools"]
+trust_level = "trusted"
+
+[projects."/home/ollie/.codex"]
+trust_level = "trusted"
+
+[projects."/home/ollie/TrivexiAI"]
+trust_level = "trusted"
+
+[projects."/home/ollie/.openclaw"]
+trust_level = "trusted"
+
+[projects."/home/ollie/.openclaw/workspace"]
+trust_level = "trusted"
+
+[notice]
+hide_full_access_warning = true
+
+[notice.model_migrations]
+"gpt-5.2-codex" = "gpt-5.3-codex"
+
+[features]
+multi_agent = true

@@ -102,7 +102,7 @@ Plans:
 | 11. Secure Dispatcher | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 12. Selection Normalization | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 13. Foundation | 2/2 | Complete    | 2026-02-24 | - |
-| 14. Dispatcher Integration | v1.2 | 2/2 | Complete | 2026-02-24 |
+| 14. Dispatcher Integration | v1.2 | Complete    | 2026-02-24 | 2026-02-24 |
 | 15. Dry-Run Validation | v1.2 | 0/? | Not started | - |
 | 16. Context Envelope | v1.2 | 0/? | Not started | - |
 

@@ -1,0 +1,20 @@
+[
+  {
+    "command": "repeat-cmd",
+    "exitCode": 2,
+    "stderrSnippet": "still boom",
+    "timestamp": "2026-02-24T19:46:32.180Z"
+  },
+  {
+    "command": "repeat-cmd",
+    "exitCode": 2,
+    "stderrSnippet": "boom",
+    "timestamp": "2026-02-24T19:50:10.980Z"
+  },
+  {
+    "command": "repeat-cmd",
+    "exitCode": 2,
+    "stderrSnippet": "still boom",
+    "timestamp": "2026-02-24T19:50:10.980Z"
+  }
+]

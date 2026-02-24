@@ -1,0 +1,4 @@
+prefix_rule(pattern=["rm", "-rf", "~/.cache/huggingface/hub/models--unsloth--Phi-4-mini-instruct-unsloth-bnb-4bit"], decision="allow")
+prefix_rule(pattern=["rm", "-rf", "~/.cache/huggingface/modules/transformers_modules/unsloth/phi_hyphen_4_hyphen_mini_hyphen_instruct_hyphen_bnb_hyphen_4bit"], decision="allow")
+prefix_rule(pattern=["curl", "-L", "https://raw.githubusercontent.com/NevaMind-AI/memU/main/README.md"], decision="allow")
+prefix_rule(pattern=["rm", "-rf", "sandboxes/agent-pumplai_pm-5190ef92/skills/skill-creator/scripts/__pycache__"], decision="allow")

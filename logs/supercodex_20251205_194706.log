@@ -1,0 +1,164 @@
+2025-12-05 19:47:06 | DEBUG    | supercodex | SuperCodex called with operation: install
+2025-12-05 19:47:06 | DEBUG    | supercodex | Arguments: {'verbose': False, 'quiet': False, 'install_dir': PosixPath('/home/ollie/.codex'), 'dry_run': False, 'force': False, 'yes': True, 'operation': 'install', 'components': None, 'mcp_servers': None, 'profile': 'full', 'force_overwrite': False, 'skip_validation': False, 'no_backup': False, 'skip_codex_md': False, 'func': <function run_install at 0x75b495f73320>}
+2025-12-05 19:47:06 | INFO     | supercodex | Executing operation: install
+2025-12-05 19:47:06 | INFO     | supercodex | Installing with full profile: ['core', 'modes', 'commands', 'mcp']
+2025-12-05 19:47:06 | INFO     | supercodex | Full installation - automatically including all MCP servers: ['sequential', 'context7', 'magic', 'serena', 'morphllm', 'playwright']
+2025-12-05 19:47:06 | INFO     | supercodex | Resolved component dependencies: ['core', 'modes', 'commands', 'mcp']
+2025-12-05 19:47:06 | DEBUG    | supercodex | Discovered 3 .md files in /home/ollie/Tools/vibe-tools/SuperCodex_Framework/SuperCodex/Core
+2025-12-05 19:47:06 | DEBUG    | supercodex | Files found: ['FLAGS.md', 'PRINCIPLES.md', 'RULES.md']
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Brainstorming.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Introspection.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Task_Management.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Token_Efficiency.md
+2025-12-05 19:47:06 | INFO     | supercodex | Excluding incompatible MODE file: MODE_Orchestration.md (requires parallel agents)
+2025-12-05 19:47:06 | INFO     | supercodex | Selected 4 Codex CLI compatible MODE files
+2025-12-05 19:47:06 | INFO     | supercodex | Creating backup of existing installation...
+2025-12-05 19:47:06 | INFO     | supercodex | Backup created: /home/ollie/.codex/backups/supercodex_backup_20251205_194706.tar.gz
+2025-12-05 19:47:06 | INFO     | supercodex | Installing 4 components...
+2025-12-05 19:47:06 | INFO     | supercodex | Installing core...
+2025-12-05 19:47:06 | INFO     | supercodex | Installing SuperCodex core framework files...
+2025-12-05 19:47:06 | DEBUG    | supercodex | Discovered 3 .md files in /home/ollie/Tools/vibe-tools/SuperCodex_Framework/SuperCodex/Core
+2025-12-05 19:47:06 | DEBUG    | supercodex | Files found: ['FLAGS.md', 'PRINCIPLES.md', 'RULES.md']
+2025-12-05 19:47:06 | INFO     | supercodex.security | [ALLOW] Codex directory installation validated: /home/ollie/.codex (PID: 178894)
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying FLAGS.md to /home/ollie/.codex/FLAGS.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied FLAGS.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying PRINCIPLES.md to /home/ollie/.codex/PRINCIPLES.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied PRINCIPLES.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying RULES.md to /home/ollie/.codex/RULES.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied RULES.md
+2025-12-05 19:47:06 | INFO     | supercodex | <CoreComponent(core)> component installed successfully (3 files)
+2025-12-05 19:47:06 | INFO     | supercodex | Updated metadata with framework configuration
+2025-12-05 19:47:06 | INFO     | supercodex | Updated metadata with core component registration
+2025-12-05 19:47:06 | INFO     | supercodex | Created CODEX.md with default content
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found existing imports: set()
+2025-12-05 19:47:06 | INFO     | supercodex | Adding 3 new imports to category 'Core Framework': ['FLAGS.md', 'PRINCIPLES.md', 'RULES.md']
+2025-12-05 19:47:06 | INFO     | supercodex | Updated CODEX.md with 3 new imports
+2025-12-05 19:47:06 | INFO     | supercodex | Updated CODEX.md with core framework imports
+2025-12-05 19:47:06 | INFO     | supercodex | ✓ core v4.0.10 component installed successfully
+2025-12-05 19:47:06 | INFO     | supercodex | Installing modes...
+2025-12-05 19:47:06 | INFO     | supercodex | Installing SuperCodex behavioral modes...
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Brainstorming.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Introspection.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Task_Management.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found compatible MODE file: MODE_Token_Efficiency.md
+2025-12-05 19:47:06 | INFO     | supercodex | Excluding incompatible MODE file: MODE_Orchestration.md (requires parallel agents)
+2025-12-05 19:47:06 | INFO     | supercodex | Selected 4 Codex CLI compatible MODE files
+2025-12-05 19:47:06 | INFO     | supercodex.security | [ALLOW] Codex directory installation validated: /home/ollie/.codex (PID: 178894)
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying MODE_Brainstorming.md to /home/ollie/.codex/MODE_Brainstorming.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied MODE_Brainstorming.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying MODE_Introspection.md to /home/ollie/.codex/MODE_Introspection.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied MODE_Introspection.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying MODE_Task_Management.md to /home/ollie/.codex/MODE_Task_Management.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied MODE_Task_Management.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying MODE_Token_Efficiency.md to /home/ollie/.codex/MODE_Token_Efficiency.md
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied MODE_Token_Efficiency.md
+2025-12-05 19:47:06 | INFO     | supercodex | Modes component installed successfully (4 mode files)
+2025-12-05 19:47:06 | INFO     | supercodex | Updated metadata with modes component registration
+2025-12-05 19:47:06 | INFO     | supercodex | Registered modes component in metadata
+2025-12-05 19:47:06 | DEBUG    | supercodex | Found existing imports: {'RULES.md', 'FLAGS.md', 'PRINCIPLES.md'}
+2025-12-05 19:47:06 | INFO     | supercodex | Adding 4 new imports to category 'Behavioral Modes': ['MODE_Brainstorming.md', 'MODE_Introspection.md', 'MODE_Task_Management.md', 'MODE_Token_Efficiency.md']
+2025-12-05 19:47:06 | INFO     | supercodex | Updated CODEX.md with 4 new imports
+2025-12-05 19:47:06 | INFO     | supercodex | Updated CODEX.md with mode imports
+2025-12-05 19:47:06 | INFO     | supercodex | ✓ modes v4.0.10 component installed successfully
+2025-12-05 19:47:06 | INFO     | supercodex | Installing commands...
+2025-12-05 19:47:06 | INFO     | supercodex | Installing SuperCodex command definitions...
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying analyze.toml to /home/ollie/.codex/commands/sg/analyze.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied analyze.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying build.toml to /home/ollie/.codex/commands/sg/build.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied build.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying cleanup.toml to /home/ollie/.codex/commands/sg/cleanup.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied cleanup.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying design.toml to /home/ollie/.codex/commands/sg/design.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied design.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying document.toml to /home/ollie/.codex/commands/sg/document.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied document.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying estimate.toml to /home/ollie/.codex/commands/sg/estimate.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied estimate.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying explain.toml to /home/ollie/.codex/commands/sg/explain.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied explain.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying git.toml to /home/ollie/.codex/commands/sg/git.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied git.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying implement.toml to /home/ollie/.codex/commands/sg/implement.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied implement.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying improve.toml to /home/ollie/.codex/commands/sg/improve.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied improve.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying index.toml to /home/ollie/.codex/commands/sg/index.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied index.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying load.toml to /home/ollie/.codex/commands/sg/load.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied load.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying reflect.toml to /home/ollie/.codex/commands/sg/reflect.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied reflect.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying save.toml to /home/ollie/.codex/commands/sg/save.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied save.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying select-tool.toml to /home/ollie/.codex/commands/sg/select-tool.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied select-tool.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying test.toml to /home/ollie/.codex/commands/sg/test.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied test.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Copying troubleshoot.toml to /home/ollie/.codex/commands/sg/troubleshoot.toml
+2025-12-05 19:47:06 | DEBUG    | supercodex | Successfully copied troubleshoot.toml
+2025-12-05 19:47:06 | INFO     | supercodex | <CommandsComponent(commands)> component installed successfully (17 files)
+2025-12-05 19:47:06 | INFO     | supercodex | Updated metadata with commands configuration
+2025-12-05 19:47:06 | INFO     | supercodex | Updated metadata with commands component registration
+2025-12-05 19:47:06 | INFO     | supercodex | ✓ commands v4.0.10 component installed successfully
+2025-12-05 19:47:06 | INFO     | supercodex | Installing mcp...
+2025-12-05 19:47:06 | INFO     | supercodex | Configuring MCP servers: ['sequential', 'context7', 'magic', 'serena', 'morphllm', 'playwright']
+2025-12-05 19:47:06 | INFO     | supercodex | Installing MCP servers for Codex...
+2025-12-05 19:47:06 | DEBUG    | supercodex | MCP servers to configure: ['sequential', 'context7', 'magic', 'serena', 'morphllm', 'playwright']
+2025-12-05 19:47:06 | DEBUG    | supercodex | Node.js 22.21.1 OK
+2025-12-05 19:47:06 | DEBUG    | supercodex | npm 10.9.4 OK
+2025-12-05 19:47:07 | DEBUG    | supercodex | uv uv 0.9.15 OK
+2025-12-05 19:47:07 | DEBUG    | supercodex | Created empty settings.json at /home/ollie/.codex/settings.json
+2025-12-05 19:47:07 | INFO     | supercodex | Installing npm package: @modelcontextprotocol/server-sequential-thinking
+2025-12-05 19:47:10 | INFO     | supercodex | Successfully installed: @modelcontextprotocol/server-sequential-thinking
+2025-12-05 19:47:10 | INFO     | supercodex | Verified installation: sequential
+2025-12-05 19:47:10 | INFO     | supercodex | Successfully installed MCP server: sequential-thinking
+2025-12-05 19:47:10 | INFO     | supercodex | Installing npm package: @upstash/context7-mcp@latest
+2025-12-05 19:47:13 | INFO     | supercodex | Successfully installed: @upstash/context7-mcp@latest
+2025-12-05 19:47:13 | INFO     | supercodex | Verified installation: context7
+2025-12-05 19:47:13 | INFO     | supercodex | Successfully installed MCP server: context7
+2025-12-05 19:47:13 | INFO     | supercodex | Installing npm package: @21st-dev/magic
+2025-12-05 19:47:16 | INFO     | supercodex | Successfully installed: @21st-dev/magic
+2025-12-05 19:47:17 | INFO     | supercodex | Verified installation: magic
+2025-12-05 19:47:17 | INFO     | supercodex | Successfully installed MCP server: magic
+2025-12-05 19:47:17 | INFO     | supercodex | Installing uv package: git+https://github.com/oraios/serena
+2025-12-05 19:47:20 | INFO     | supercodex | Successfully installed: git+https://github.com/oraios/serena
+2025-12-05 19:47:20 | INFO     | supercodex | Verified installation: serena
+2025-12-05 19:47:20 | INFO     | supercodex | Successfully installed MCP server: serena
+2025-12-05 19:47:20 | INFO     | supercodex | Installing npm package: @morph-llm/morph-fast-apply
+2025-12-05 19:47:24 | INFO     | supercodex | Successfully installed: @morph-llm/morph-fast-apply
+2025-12-05 19:47:24 | INFO     | supercodex | Verified installation: morphllm
+2025-12-05 19:47:24 | INFO     | supercodex | Successfully installed MCP server: morphllm-fast-apply
+2025-12-05 19:47:24 | INFO     | supercodex | Installing npm package: @playwright/mcp@latest
+2025-12-05 19:47:26 | INFO     | supercodex | Successfully installed: @playwright/mcp@latest
+2025-12-05 19:47:27 | INFO     | supercodex | Verified installation: playwright
+2025-12-05 19:47:27 | INFO     | supercodex | Successfully installed MCP server: playwright
+2025-12-05 19:47:27 | INFO     | supercodex | Added new MCP server 'sequential-thinking' from sequential
+2025-12-05 19:47:27 | DEBUG    | supercodex | Server 'sequential' installed as enabled
+2025-12-05 19:47:27 | INFO     | supercodex | Added new MCP server 'context7' from context7
+2025-12-05 19:47:27 | DEBUG    | supercodex | Server 'context7' installed as enabled
+2025-12-05 19:47:27 | INFO     | supercodex | Added new MCP server 'magic' from magic
+2025-12-05 19:47:27 | INFO     | supercodex | Server 'magic' installed as disabled by default: Codex API compatibility issues - function naming conflicts
+2025-12-05 19:47:27 | INFO     | supercodex | Added new MCP server 'serena' from serena
+2025-12-05 19:47:27 | INFO     | supercodex | Server 'serena' installed as disabled by default: Codex API compatibility issues - complex semantic operations may conflict
+2025-12-05 19:47:27 | INFO     | supercodex | Added new MCP server 'morphllm-fast-apply' from morphllm
+2025-12-05 19:47:27 | INFO     | supercodex | Server 'morphllm' installed as disabled by default: Codex API compatibility issues - function naming conflicts with fast apply
+2025-12-05 19:47:27 | INFO     | supercodex | Added new MCP server 'playwright' from playwright
+2025-12-05 19:47:27 | DEBUG    | supercodex | Server 'playwright' installed as enabled
+2025-12-05 19:47:27 | DEBUG    | supercodex | Updated Codex configuration
+2025-12-05 19:47:27 | INFO     | supercodex | Successfully installed and configured 6 MCP servers
+2025-12-05 19:47:27 | INFO     | supercodex | Updated metadata with MCP component registration
+2025-12-05 19:47:27 | INFO     | supercodex | Registered MCP component in metadata
+2025-12-05 19:47:27 | INFO     | supercodex | ✓ mcp v4.0.10 component installed successfully
+2025-12-05 19:47:27 | INFO     | supercodex | Running post-installation validation...
+2025-12-05 19:47:27 | INFO     | supercodex |   ✓ core: Valid
+2025-12-05 19:47:27 | DEBUG    | supercodex | Checking installed version
+2025-12-05 19:47:27 | DEBUG    | supercodex | Metadata file exists, reading version
+2025-12-05 19:47:27 | DEBUG    | supercodex | Found version: 4.0.10
+2025-12-05 19:47:27 | INFO     | supercodex |   ✓ modes: Valid
+2025-12-05 19:47:27 | INFO     | supercodex |   ✓ commands: Valid
+2025-12-05 19:47:27 | DEBUG    | supercodex | Checking installed version
+2025-12-05 19:47:27 | DEBUG    | supercodex | Metadata file exists, reading version
+2025-12-05 19:47:27 | DEBUG    | supercodex | Found version: 4.0.10
+2025-12-05 19:47:27 | INFO     | supercodex |   ✓ mcp: Valid
+2025-12-05 19:47:27 | INFO     | supercodex | All components validated successfully!
+2025-12-05 19:47:27 | INFO     | supercodex | Installed components: core, modes, commands, mcp

@@ -1,0 +1,56 @@
+{
+  "commands": {
+    "auto_update": false,
+    "enabled": true,
+    "version": "4.0.10"
+  },
+  "components": {
+    "commands": {
+      "category": "commands",
+      "files_count": 17,
+      "installed_at": "2025-12-05T19:47:06.923518",
+      "version": "4.0.10"
+    },
+    "core": {
+      "category": "core",
+      "files_count": 3,
+      "installed_at": "2025-12-05T19:47:06.914175",
+      "version": "4.0.10"
+    },
+    "mcp": {
+      "category": "integration",
+      "configured_servers": [
+        "sequential",
+        "context7",
+        "magic",
+        "serena",
+        "morphllm",
+        "playwright"
+      ],
+      "installed_at": "2025-12-05T19:47:27.101354",
+      "servers_configured": 6,
+      "version": "4.0.10"
+    },
+    "modes": {
+      "category": "modes",
+      "files_count": 4,
+      "installed_at": "2025-12-05T19:47:06.916856",
+      "version": "4.0.10"
+    }
+  },
+  "framework": {
+    "components": [
+      "core"
+    ],
+    "description": "AI-enhanced development framework for Codex CLI",
+    "installation_type": "global",
+    "name": "SuperCodex",
+    "version": "4.0.10"
+  },
+  "supercodex": {
+    "auto_update": false,
+    "enabled": true,
+    "profile": "default",
+    "version": "4.0.10"
+  }
+}
