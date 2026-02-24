@@ -8,28 +8,20 @@ A focused effort to optimize the Codex local toolkit (prompts, agents, skills, w
 
 Codex runs lean and predictable: the right agent/prompt triggers the right behavior with minimal friction.
 
-## Current Milestone: v1.0 Numbered CLI Selection UX
-
-**Goal:** Standardize numbered option output and selection handling so Codex CLIs can drive actions reliably without manual parsing.
-
-**Target features:**
-- Standardized AI output schema for numbered lists (1–N, no filler)
-- Generic InputSelector helper to render lists and return selected item
-- Input validation with 0-to-exit and non-numeric error handling
-- Codex-style execution flow that triggers the associated action on selection
-
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Standardized AI numbered-list responses across Codex prompts/agents — v1.0
+- ✓ Reusable InputSelector helper for CLI-driven selection — v1.0
+- ✓ Input validation with 0-to-exit convention for CLI flows — v1.0
+- ✓ Link selections to Codex actions (execute command/apply diff) with safety dispatch — v1.0
+- ✓ Width-aware truncation and Unicode-aware alignment — v1.0
+- ✓ Headless preselection support for scripts and CI — v1.0
 
 ### Active
 
-- [ ] Standardize AI numbered-list responses across Codex prompts/agents
-- [ ] Provide a reusable InputSelector helper for CLI-driven selection
-- [ ] Add input validation with 0-to-exit convention for CLI flows
-- [ ] Link selections to Codex actions (execute command/apply diff) without manual parsing
+(Planning next milestone)
 
 ### Out of Scope
 
@@ -38,22 +30,27 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 
 ## Context
 
-- Codebase is a local prompts/agents/tooling bundle (Node.js CLI utilities, Markdown/TOML docs)
-- Recent codebase map exists under `.planning/codebase/`
-- No package manifest; dependencies are implicit via scripts (`npx` MCP servers, pnpm in skills)
+- Shipped v1.0 Numbered CLI Selection UX with safety dispatch and UX polish.
+- Codebase consists of Node.js CLI utilities (CJS), Markdown prompts, and TOML configurations.
+- Safety dispatch layer includes strict workspace boundary and secret redaction.
+- ~6,600 LOC JS/CJS in `get-shit-done` core.
 
 ## Constraints
 
-- **Stack**: Keep current Node.js/CJS structure; avoid major rewrites
-- **Determinism**: Prefer pinned versions/configs where possible to reduce drift
-- **Security**: Avoid introducing secrets; reinforce secret hygiene in docs
+- **Stack**: Keep current Node.js/CJS structure; avoid major rewrites.
+- **Determinism**: Prefer pinned versions/configs where possible to reduce drift.
+- **Security**: Strict workspace boundary (CWD) and automated secret redaction in previews.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Use auto mode with standard depth | Faster end-to-end planning with balanced quality/cost | — Pending |
-| Prioritize internal optimizations over new features | Focus effort on reliability and clarity of existing toolkit | — Pending |
+| Use auto mode with standard depth | Faster end-to-end planning with balanced quality/cost | ✓ Good |
+| Prioritize internal optimizations over new features | Focus effort on reliability and clarity of existing toolkit | ✓ Good |
+| Strict numbered schema (1–N) | Enables deterministic parsing and re-indexing of agent outputs | ✓ Good |
+| Payload-first execution contract | Ensures consistent behavior between interactive and headless flows | ✓ Good |
+| Strict CWD workspace boundary | Mitigates risk of AI hallucinating paths outside project scope | ✓ Good |
+| Secret redaction in previews | Prevents credential leakage during screen-sharing or logs | ✓ Good |
 
 ---
-*Last updated: 2026-02-24 after starting milestone v1.0 Numbered CLI Selection UX*
+*Last updated: 2026-02-24 after v1.0 milestone*

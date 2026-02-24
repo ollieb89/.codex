@@ -1,47 +1,30 @@
-# Roadmap — Numbered CLI Selection UX
+# Roadmap — Codex Base Optimization
 
-**Phases:** 3 (numbered 7–9)  
-**Requirements covered:** 7/7 ✓
+## Milestones
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
-| 7 | Schema & Selector | Enforce numbered schema and build a reliable selector with 0-to-exit | SCH-01, SCH-02, SEL-01 | 3 |
-| 8 | Safe Dispatch | Wire selections to actions with confirmation, dry-run, and sanitization | SAF-01, SAF-02 | 3 |
-| 9 | UX Polish & Headless | Improve readability, wide-label handling, and non-interactive flow | SEL-02, UX-01 | 3 |
+- ✅ **v1.0 Numbered CLI Selection UX** — Phases 7-9 (shipped 2026-02-24)
+- 🚧 **v1.1 Planning** — (Planning in progress)
 
-## Phase 7: Schema & Selector
+## Phases
 
-**Goal:** Enforce numbered option schema and provide a selector that validates input and returns structured selections.  
-**Requirements:** SCH-01, SCH-02, SEL-01  
-**Success Criteria**:
-1. System prompt snippet outputs strict `1–N` lists; non-conforming output is rejected or retried.
-2. Normalizer handles JSON arrays when present and sanitized numbered-text otherwise (ANSI/markdown stripped).
-3. Selector renders numbered options, reserves `0` to exit, and returns `{index,label,payload}` after validating numeric range.
+<details>
+<summary>✅ v1.0 Numbered CLI Selection UX (Phases 7-9) — SHIPPED 2026-02-24</summary>
 
-## Phase 8: Safe Dispatch
+For full phase details, see: [.planning/milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
-**Goal:** Execute selected actions safely with previews, confirmation, and allowlists.  
-**Requirements:** SAF-01, SAF-02  
-**Success Criteria**:
-1. Dispatcher maps selection to action types (shell/diff/flow) and shows preview.
-2. Mutating actions require confirmation and support dry-run; read-only actions may run without extra prompt.
-3. Payloads are sanitized/allowlisted; commands/paths outside workspace are blocked.
-**Plans:** 2 planned  
-Plans:
-- [ ] 08-01-PLAN.md — Safety shield: sanitizer/allowlist, force-dispatch gate, redaction, edit-on-block
-- [ ] 08-02-PLAN.md — Preview + confirmation/dry-run dispatcher flow with metadata and mini-diff
+- [x] Phase 7: Schema & Selector — completed 2026-02-24
+- [x] Phase 8: Safe Dispatch — completed 2026-02-24
+- [x] Phase 9: UX Polish & Headless — completed 2026-02-24
 
-## Phase 9: UX Polish & Headless [x] (2026-02-24)
+</details>
 
-**Goal:** Improve readability and support scripted use.  
-**Requirements:** SEL-02, UX-01  
-**Success Criteria**:
-1. Long/wide labels truncate cleanly with aligned numbering (handles wide Unicode); full text available on demand.
-2. Colorized numbering available with a no-color fallback/flag.
-3. Non-interactive mode accepts preselected number via flag/env, logs options + selection, and exits cleanly on `0`.
+## Progress
 
-**Plans:**
-- [x] 09-01-PLAN.md — Width-aware formatting and aligned numbering
-- [x] 09-02-PLAN.md — Headless preselection and audit logging
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 7. Schema & Selector | v1.0 | 2/2 | Complete | 2026-02-24 |
+| 8. Safe Dispatch | v1.0 | 2/2 | Complete | 2026-02-24 |
+| 9. UX Polish & Headless | v1.0 | 2/2 | Complete | 2026-02-24 |
 
 ---
+*For archived requirements, see: [.planning/milestones/v1.0-REQUIREMENTS.md](milestones/v1.0-REQUIREMENTS.md)*
