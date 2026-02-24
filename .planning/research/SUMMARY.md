@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Codex CLI Toolkit — v1.1.0 Selection Standardization & Security
-**Domain:** Node.js CLI toolkit — selection UX refinements, secure dispatch, headless integration, Unicode padding
+**Project:** Codex CLI — agent-to-local feedback loop (v1.2)
+**Domain:** Node.js CLI toolkit — agentic dispatch with STDERR recovery, session persistence, context loading, and dry-run validation
 **Researched:** 2026-02-24
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Codex v1.1.0 is an incremental hardening milestone for an existing, zero-dependency Node.js CLI toolkit (~6,600 LOC). The baseline (v1.0) ships a working numbered selection system, headless preselection via `--select`/`GS_DONE_SELECT`, and basic secret redaction. v1.1.0 fills four well-defined gaps: auto-reindexing of AI-generated numbered lists, expanded secret detection covering real-world credential patterns, consolidated and widened destructive-command detection, and Unicode-aware padding using `Intl.Segmenter`. The critical constraint is that the entire codebase has no `package.json` and zero external dependencies — this constraint holds for v1.1.0 and every new capability is satisfied using Node.js built-ins alone.
+Codex v1.2 extends an already-stable dispatcher/selector CLI toolkit with four features that close the agent feedback loop: STDERR recovery, incremental context loading, session persistence, and structured dry-run validation. All research confirms this is a well-understood pattern, directly comparable to Warp AI terminal, GitHub Copilot CLI, and Spotify's background coding agent. The recommended approach is entirely additive — no new external dependencies, no rewrites. Two new modules (`dispatcher/stderr-bridge.js`, `session/store.js`) and targeted modifications to `dispatcher/index.js` and `dispatcher/preview.js` cover the full scope. The existing `redactSecrets`, `sanitizeAction`, `editCommand`, and `dryRun` flag paths are all reused directly.
 
-The recommended approach is surgical: two new files (`selector/normalizer.js` and `dispatcher/commands.js`) plus targeted modifications to four existing files. The architecture research has produced an exact build order — `commands.js` first (no deps), then dispatcher modules in parallel, then selector changes, then optional `headless.js` refinements. All four feature areas have confirmed implementation patterns derived from direct codebase inspection, including a verified `Intl.Segmenter` implementation tested on Node 25.6.1 that fixes the existing ZWJ emoji width bug (`👨‍👩‍👧` returns 8 with the current char-loop; correct value is 2). No architectural ambiguity remains.
+The biggest risk in this milestone is not technical complexity — the individual changes are modest — but the security surface that opens when agent-generated content (recovery suggestions, context payloads, session entries) is handled without consistent redaction. Every string crossing from command execution into agent-visible state must pass through `redactSecrets`. The second risk is architectural: recovery retry commands must re-enter `dispatchSelection` with full sanitization, not bypass it via a direct runner call. Both risks have clear prevention patterns and verification tests; they need discipline in implementation.
 
-The primary risks are in the security domain. Secret redaction false negatives (non-standard variable names like `GITHUB_PAT`, `DB_PASSWORD`) and false positives (overaggressive patterns redacting benign assignments like `TOKEN_COUNT=5`) are the highest-severity pitfalls because they either expose credentials or break command previews. Destructive detection must be scoped to command-position tokens to avoid warning fatigue. The 7-tier secret pattern regexes sourced from Semgrep and Gitleaks have MEDIUM confidence and must be validated against a real `.env` fixture corpus before Phase 2 ships.
+The recommended build order is: (1) `session/store.js` and `dispatcher/stderr-bridge.js` in parallel (no internal deps), then (2) wire both into `dispatcher/index.js`, then (3) extend the dry-run return path in `dispatcher/index.js`/`dispatcher/preview.js`. This sequencing means each step is independently testable before integration. Target is approximately 150 total tests at v1.2 completion (up from 126).
 
 ---
 
@@ -19,111 +19,107 @@ The primary risks are in the security domain. Secret redaction false negatives (
 
 ### Recommended Stack
 
-The stack is unchanged: Node.js 25.6.1, CommonJS modules, `node:readline` for prompts, `node:child_process` for execution, and `node:test` + `node:assert` for tests. No new dependencies are introduced. The one new built-in capability is `Intl.Segmenter` for Unicode grapheme-cluster-aware width calculation — stable since Node 16, verified on the current runtime, and replacing the existing char-loop that miscounts ZWJ emoji sequences. All considered npm packages were rejected: `string-width` v5+ is ESM-only (incompatible with zero-dep CJS codebase), v4.2.3 is stale and the CJS re-export variant has documented supply chain concerns (Snyk 2024), and no other package adds value a built-in cannot provide.
+No new external dependencies are introduced. All four features use Node.js built-ins exclusively, consistent with the project's zero-external-deps constraint. The runtime is Node.js 25.6.1, and all required APIs (`child_process.exec`, `execFileSync`, `fs`, `path`, `os`) are confirmed working on this machine.
 
 **Core technologies:**
-- Node.js 25.6.1 built-ins: Execution environment — all v1.1.0 features fit existing built-ins; no package.json introduced
-- `Intl.Segmenter` (built-in, Node 16+): Unicode grapheme width — replaces broken char-loop with zero-dependency correctness, verified on Node 25.6.1
-- `node:test` + `node:assert` (built-in): Test framework — already in use; `node --test --watch` available for TDD loop
-- `node:readline` / `node:child_process` (built-in): Prompts and execution — no changes to existing usage
+- `node:child_process` (`exec`): STDERR recovery — already used in `defaultRunner`; stderr is already buffered separately in `result.stderr`
+- `node:child_process` (`execFileSync`): Incremental context loading (git status, ls capture) — uses argv array to avoid shell injection; scoped to `cwd` with `maxBuffer: 64KB`
+- `node:fs` (sync): Session persistence — follows existing `state.cjs` convention; single-process CLI, sync I/O is correct
+- `node:path` / `node:os`: Path resolution for session file — already used throughout codebase
+
+**New files to create:**
+- `get-shit-done/bin/lib/dispatcher/stderr-bridge.js` — pure data transform, no I/O, no imports
+- `get-shit-done/bin/lib/session/store.js` — ring buffer (max 3 entries), `node:fs` only
+
+**Modified files:**
+- `get-shit-done/bin/lib/dispatcher/index.js` — structured return, bridge call, session append
+- `get-shit-done/bin/lib/dispatcher/preview.js` — dry-run returns `DryRunResult` struct
 
 ### Expected Features
 
-The feature landscape for v1.1.0 is fully enumerated via direct codebase gap analysis. The headless integration (`--select` flag, `GS_DONE_SELECT` env) is already complete and requires no v1.1.0 work beyond optional input validation hardening.
+**Must have (table stakes — ship in v1.2):**
+- STDERR surfacing on non-zero exit — eliminates silent failures; approximately 5-line change in `dispatchSelection`
+- STDERR recovery bridge — on non-zero exit: prompt Retry / Edit (reuse `editCommand`) / Abort; closes the agent feedback loop
+- Enriched dry-run result — add `sanitizedCommand`, `redactions`, `estimatedMutating` to `{ran:false, dryRun:true}`; enables test assertions on dispatch pipeline
+- Session persistence (last 3 actions) — ring-buffer JSON at `.planning/session.json`; write sanitized command, exit code, stderr snippet, timestamp
+- Context envelope return — `dispatchSelection` returns `context:{stdout,stderr,exitCode,command}` (capped at 2KB each) for the caller to feed into the next agent prompt
 
-**Must have (table stakes) — ship in v1.1.0:**
-- Auto-reindex: normalize `id` fields to 1..N before any render call — required for correct behavior when AI output skips or duplicates numbers
-- Expanded secret patterns (7 tiers): OpenAI keys, GitHub PATs, AWS access keys, Stripe keys, PEM blocks, connection string credentials, generic fallback — prevents real credential leakage in terminal output and CI logs
-- Extended destructive verbs: `delete`, `destroy`, `-rf`, `--hard`, `purge`, `wipe`, `unlink` added to `DESTRUCTIVE_TERMS`, wired to confirmation gating in `dispatchSelection`
-- Consolidated command policy constants: single `commands.js` source of truth replacing three divergent inline definitions across `sanitize.js`, `preview.js`, and `dispatcher/index.js`
+**Should have (P2 — ship in v1.2 if straightforward):**
+- Context envelope return from `dispatchSelection` — additive fields, low implementation risk, moderate agent value
 
-**Should have (competitive) — ship in v1.1.0:**
-- `Intl.Segmenter`-based `stringWidth` in `format.js`: fixes ZWJ emoji and flag emoji misalignment with zero added dependencies
-- `padLabel()` helper in `format.js`: enables correct Unicode-aware right-padding for column alignment
-- `columns ?? 80` fallback in width resolution: prevents NaN rendering in non-TTY contexts (CI, pipes, test runners)
-
-**Defer to v1.2+:**
-- Configurable destructive-verb injection API (callers extending `DESTRUCTIVE_TERMS` at runtime) — wait for real consumer need
-- `string-width` as explicit npm dependency — inline implementation is sufficient; evaluate only if alignment bugs surface with real content
-- East Asian Ambiguous character width coverage — narrow-only treatment is correct default; defer until user complaint
-- Entropy-based secret detection — high false-positive risk; pattern-based approach is correct for in-process CLI preview redaction
+**Defer to v1.3+:**
+- Automatic context injection into prompt templates (`{{context.stdout}}` / `{{context.stderr}}` in Markdown files) — wait for a real consumer
+- Session replay as numbered menu — wait for confirmed user demand
+- Multi-turn agent loop orchestrator (`runLoop()`) — defer until context envelope stabilizes across real callers
 
 ### Architecture Approach
 
-The architecture is a two-layer pipeline: a `selector/` layer (normalizer → entry formatting → headless or interactive prompt) and a `dispatcher/` layer (sanitize → preview → confirm → run). The layers communicate only via a typed entry struct (`{id, label, value, actionable, payload?, metadata?}`). v1.1.0 adds one new module per layer (`normalizer.js` in selector, `commands.js` in dispatcher) and modifies four existing files. No existing public contracts change — all modifications are additive (new constants, expanded pattern arrays, new helper functions) or consolidating (replacing inline definitions with imports from `commands.js`).
+v1.2 builds on top of the v1.1 stable baseline without touching the selector subsystem. The critical gap is that `dispatchSelection` currently returns `{ran, result}` but callers discard it — STDERR from failed runs is never surfaced and there is no session memory. The fix promotes `result` to a first-class return value, adds a passive formatting bridge for failure payloads, and appends records to a file-based ring buffer. The selector layer (`normalizer.js`, `index.js`, `headless.js`, `format.js`) has zero changes.
 
 **Major components:**
-1. `selector/normalizer.js` (NEW) — validates and reindexes raw AI numbered-list output into clean `entries[]` before `selectOption` is called; selector itself unchanged
-2. `dispatcher/commands.js` (NEW) — single source of truth for `BLOCKED_COMMANDS`, `GRAY_COMMANDS`, `DESTRUCTIVE_HIGHLIGHT_TERMS`, `MUTATING_PATTERN`; no logic, no imports
-3. `dispatcher/sanitize.js` (MODIFIED) — imports shared constants from `commands.js`; expands `redactSecrets()` with 7-tier ordered patterns; interface `{redacted, replacements}` unchanged
-4. `dispatcher/preview.js` (MODIFIED) — imports `DESTRUCTIVE_HIGHLIGHT_TERMS` from `commands.js`; no logic change
-5. `dispatcher/index.js` (MODIFIED) — imports `MUTATING_PATTERN` from `commands.js`; replaces inline regex; redact-for-display/execute-original pattern preserved
-6. `selector/format.js` (MODIFIED) — adds `padLabel()` helper; replaces char-loop `stringWidth` with `Intl.Segmenter` implementation using module-level singleton
+1. `dispatcher/stderr-bridge.js` — accepts `(action, result)` where `result.code !== 0`; returns a `RecoveryPayload` with `hint` (first 500 chars of stderr, redacted); pure data transform, no I/O
+2. `session/store.js` — `append(cwd, record)` / `read(cwd)` / `clear(cwd)`; ring buffer (max 3 entries); writes to `{cwd}/.planning/session.json`; atomic write via pid+timestamp temp file + `renameSync`; file permissions `0o600`
+3. `dispatcher/index.js` (modified) — calls bridge and store after runner; extends return to `{ran, dryRun, cancelled, result, recovery, preview}`; session append wrapped in try/catch (non-fatal)
+4. `dispatcher/preview.js` (modified) — dry-run returns `DryRunResult { preview: { command, sanitizeStatus, mutating, redactions } }` instead of bare `{ran:false, dryRun:true}`
+
+**New dependency edge:** `dispatcher/index.js` requires `../session/store` is the only new cross-directory dependency.
 
 ### Critical Pitfalls
 
-1. **Secret redaction false negatives on non-standard variable names** — `DB_PASSWORD`, `GITHUB_PAT`, `OPENAI_KEY`, `STRIPE_SK_LIVE` sail through the existing regex. Avoid by implementing 7-tier ordered patterns (specific providers first, generic fallback last) and validating against a real `.env` fixture corpus before shipping.
+1. **STDERR forwarded to agent without redaction** — `result.stderr` (and `err.message`) must pass through `redactSecrets` before reaching the bridge output; shell errors often echo the original command verbatim including secrets. Prevention: explicit test with a token-pattern fixture; assert `[REDACTED]` in bridge output.
 
-2. **Secret redaction false positives break legitimate command previews** — Broadening patterns risks redacting `TOKEN_COUNT=5` or file paths containing keywords. Avoid by requiring RHS to match credential heuristics (min length, no path separators) and maintaining negative-case test fixtures asserting specific strings are NOT redacted.
+2. **Session file stores raw `action.command` instead of `sanitized.sanitizedCommand`** — the sanitizer was designed for preview, not storage; developers reach for the convenient `action` object when session persistence is added later. Prevention: session store API must accept only `sanitizedCommand`; test that reads session file on disk and asserts the raw token is absent.
 
-3. **Destructive detection fires on benign argument substrings** — `echo "drop table users"` lights up red; `npm run truncate-logs` triggers on `truncate` in argument position. Avoid by restricting highlighting to command-position tokens (first token, or after `&&`, `||`, `;`, `|`), not arbitrary substrings.
+3. **Recovery retry commands bypass `dispatchSelection`** — implementing retry as a direct `runner()` call skips workspace boundary check, blocklist, and secret redaction. Prevention: all recovery suggestions must re-enter `dispatchSelection` as a new `selection` object.
 
-4. **Auto-reindex breaks stale headless `--select` references** — If the entry set changes between invocations, `--select=3` silently points to a different item. Avoid by reindexing only for fresh same-session menu renders; never mutate IDs on a live entry set with potential headless consumers.
+4. **Dry-run preview diverges from actual execution** — `--force` stripping regex in `sanitize.js` matches any `--force` in the command string, including the user's own `git push --force`; user approves a preview that does not reflect what executes. Prevention: scope GSD's `--force` stripping to dispatch-level flag position only; add a `git push --force` fidelity test.
 
-5. **`--select` flag parsing silently accepts malformed values** — `parseInt('10abc', 10)` returns `10`. Avoid by validating with `/^\d+$/` before `parseInt`; reject `--select=1abc`, `--select=`, `--select=-1`, `--select=1.5` with exit code 1 and a clear message.
+5. **Context payload bloat — full stdout passed to agent without cap** — a single `npm install` or `git log` can produce hundreds of kilobytes. Cap stdout/stderr at 2,000 bytes before running `redactSecrets`; include `truncated: true` flag; for clean exits pass `{ success: true, exitCode: 0 }` without stdout.
 
 ---
 
 ## Implications for Roadmap
 
-The build order is dictated by module dependencies. `commands.js` has no dependencies and unblocks three dispatcher modules simultaneously. Dispatcher changes are independent of selector changes after `commands.js` is in place. This maps to four sequential-then-parallel phases with an optional hardening phase.
+Based on research, suggested phase structure (4 phases ordered by internal dependency):
 
-### Phase 1: Shared Command Policy Foundation
-**Rationale:** `dispatcher/commands.js` is a pure constants module with no imports. It is the dependency anchor for all three dispatcher modifications and must be built first to enable parallel downstream work.
-**Delivers:** Single source of truth for `BLOCKED_COMMANDS`, `GRAY_COMMANDS`, `DESTRUCTIVE_HIGHLIGHT_TERMS`, `MUTATING_PATTERN`. No behavioral change yet — existing inline definitions replaced with imports.
-**Addresses:** Anti-pattern of duplicating command lists across sanitize, preview, and dispatcher index (the current state where adding a term to `preview.js` does not update confirmation gating in `index.js`).
-**Avoids:** Pitfall 4 (destructive detection substring false positives caused by drift between the three separate term lists).
+### Phase 1: Foundation — Session Store and STDERR Bridge
+**Rationale:** Both new modules have zero internal dependencies and can be built and fully tested in isolation before the dispatcher is touched. Starting here de-risks the integration step (Phase 2) by ensuring stable, independently-verified building blocks. ARCHITECTURE.md recommends building these in parallel.
+**Delivers:** `session/store.js` (ring buffer, atomic write, file permissions `0o600`) and `dispatcher/stderr-bridge.js` (RecoveryPayload formatter, redaction enforced)
+**Addresses:** Session persistence (table stakes), STDERR recovery foundation
+**Avoids:** Pitfall 2 (session stores raw command) — enforced by store API design; Pitfall 1 (unredacted stderr) — enforced in bridge module
 
-### Phase 2: Secure Dispatcher
-**Rationale:** With `commands.js` in place, `sanitize.js`, `preview.js`, and `dispatcher/index.js` can each be updated independently. Secret pattern expansion also lands here. This is the highest security-value phase.
-**Delivers:** Expanded 7-tier secret redaction (OpenAI, GitHub PAT, AWS, Stripe, PEM, connection strings, generic fallback). Consolidated and extended destructive-verb detection with confirmation gating. `ps`-exposure limitation documented as known gap in code comments and phase summary.
-**Implements:** Architecture Pattern 1 (Shared Constants Module) and Pattern 3 (Redact-for-Display, Execute-Original).
-**Must avoid:** Pitfall 2 (false negatives — validate against real `.env` fixture corpus before merging), Pitfall 3 (false positives — add negative tests for `TOKEN_COUNT=5` and path strings), Pitfall 11 (never swap `sanitizedCommand` and original `action.command` — preview gets redacted, runner gets original).
+### Phase 2: Dispatcher Integration — Structured Return and Session Wiring
+**Rationale:** Depends on Phase 1 being stable. This is the single highest-impact change: promoting `result` to a first-class return value and wiring the bridge and store calls into `dispatchSelection`. All other features flow from this structured return.
+**Delivers:** Modified `dispatcher/index.js` with `recovery` field on failure, session append on every dispatch (try/catch wrapped), structured return shape `{ran, result, recovery, preview}`
+**Uses:** `stderr-bridge.js` and `session/store.js` from Phase 1; existing `sanitizeAction`, `defaultRunner`
+**Avoids:** Pitfall 3 (recovery bypass) — retry path documented as `dispatchSelection` re-entry; Pitfall 5 (session write blocks dispatch) — try/catch wraps `store.append`
 
-### Phase 3: Selection Normalization
-**Rationale:** `selector/normalizer.js` sits above `selectOption` and depends only on `format.js` being stable. It is independent of all dispatcher work and can proceed concurrently with Phase 2.
-**Delivers:** `normalizer.js` that validates `/^\d+\.\s+.+$/` lines from AI output, silently reindexes skipped numbers to 1..N, and hard-fails with retry hint on duplicate leading numbers. `selectOption` itself is unchanged — normalizer is a pre-processing step, not an internal selector change.
-**Implements:** Architecture Pattern 2 (Above-the-selector Normalization) — selector remains independently testable; its tests never need to model bad AI output.
-**Must avoid:** Pitfall 1 (reindex breaking stale `--select` references — only reindex in fresh same-session renders), Anti-pattern 3 (normalization logic inside `selectOption`).
+### Phase 3: Dry-Run Validation — Structured Preview Result
+**Rationale:** Extends the existing `dryRun` flag path in `dispatcher/index.js` (lines 84-87) with a `DryRunResult` struct. Depends on Phase 2 because the structured return shape is now established. This is a purely additive, backwards-compatible change; existing callers checking `result.dryRun === true` are unaffected.
+**Delivers:** `DryRunResult { preview: { command, sanitizeStatus, mutating, redactions } }` from `dispatchSelection` when `opts.dryRun = true`; enables CI test assertions on dispatch pipeline without executing commands
+**Avoids:** Pitfall 4 (dry-run divergence) — same code path as live dispatch, short-circuit only at runner; Pitfall 8 (--force stripping) — fidelity test enforced here
 
-### Phase 4: Unicode-Aware Padding and Truncation
-**Rationale:** `format.js` changes are isolated to the selector rendering path with no dispatcher dependencies. Unicode fixes are correctness improvements; landing them after security work reflects priority ordering (security over cosmetics).
-**Delivers:** `Intl.Segmenter`-based `stringWidth` (module-level singleton, verified implementation from STACK.md). `padLabel(str, targetWidth)` helper using `stringWidth` for correct visual-width padding. `columns ?? 80` fallback preventing NaN in non-TTY contexts. Updated `format.test.js` with flag emoji (`🇬🇧`), ZWJ sequences (`👨‍💻`), and `columns = undefined` test cases.
-**Addresses:** Pitfall 8 (ZWJ/flag emoji width divergence from terminal rendering), Pitfall 9 (surrogate split at truncation boundary), Pitfall 10 (`process.stdout.columns` undefined produces NaN widths in CI).
-**Must avoid:** Anti-pattern 4 (using `.length` for visual padding), iterating by code unit index (`charCodeAt`) instead of grapheme cluster.
-
-### Phase 5: Headless Hardening (Optional)
-**Rationale:** The core `handleHeadless` implementation is already complete and tested. This phase addresses edge cases that are unlikely to affect normal usage but matter for CI robustness. Can be deferred if Phases 1–4 complete without surfacing headless issues.
-**Delivers:** `/^\d+$/` full-string validation on `--select` values (rejects `10abc`, empty, negative, float with exit code 1). Stderr notice when `GS_DONE_SELECT` activates headless mode. Optional standalone `parseSelectFlag(args, env)` export from `headless.js`.
-**Addresses:** Pitfall 6 (`parseInt` accepting malformed `--select` values), Pitfall 7 (`GS_DONE_SELECT` sticky env variable leaking across shell sessions).
+### Phase 4: Context Envelope and Incremental Context Loading
+**Rationale:** Depends on Phase 2's structured return (`result.stdout`, `result.stderr`, `result.code` promoted to first-class). The context envelope is a low-risk additive return field; the incremental context loading contract is a calling convention, not a new module. Defer prompt template integration to v1.3.
+**Delivers:** `context:{stdout,stderr,exitCode,command}` (each capped at 2KB, redacted) returned from `dispatchSelection`; `dispatcher/context.js` for `execFileSync` git status and ls capture; documented context envelope contract for agent callers
+**Avoids:** Pitfall 6 (context bloat) — 2KB cap enforced and tested with 1,000-line fixture; Pitfall 10 (out-of-workspace output in context) — only capture output from `status: 'allow'` dispatches
 
 ### Phase Ordering Rationale
 
-- Phase 1 (`commands.js`) has zero risk and maximum unblocking value — always build it first.
-- Phases 2 and 3 are independent of each other and can run in parallel; both depend only on Phase 1 being complete.
-- Phase 4 (Unicode `format.js`) is independent of both dispatcher and normalizer but benefits from being stable before Phase 3's normalizer depends on it — practically, Phase 4 can run concurrently with Phase 3 since they touch different files.
-- Phase 5 is optional hardening; defer unless headless edge cases surface during Phase 1–4 testing.
+- Phases 1 and 2 must be sequential because the dispatcher integration depends on stable bridge and store modules.
+- Phase 3 is independent of Phase 4 — dry-run enrichment and context loading do not interact; they can be swapped or parallelized if desired.
+- All phases produce independently testable artifacts — approximately 10 tests for store, 8 for bridge, 6 new dispatcher tests, 8 for context/dry-run. Total target: approximately 150 tests (from 126).
+- No phase requires external research — all APIs are Node.js built-ins verified on this runtime.
 
 ### Research Flags
 
-Phases with well-documented patterns (no additional research needed before planning):
-- **Phase 1 (commands.js):** Pure constants extraction — trivial refactor, implementation is specified completely in ARCHITECTURE.md.
-- **Phase 3 (normalizer):** Implementation pattern fully specified in ARCHITECTURE.md; build directly from the design.
-- **Phase 4 (Unicode):** `Intl.Segmenter` implementation is code-complete in STACK.md and verified; apply directly.
-- **Phase 5 (headless hardening):** All changes documented in PITFALLS.md; implement directly from pitfall prevention guidance.
+Phases with standard, well-documented patterns — no `/gsd:research-phase` needed:
+- **Phase 1 (Session Store + STDERR Bridge):** Pure Node.js `fs` and data transform. Pattern is identical to existing `state.cjs`. Atomic write via temp file + `renameSync` is standard POSIX practice.
+- **Phase 2 (Dispatcher Integration):** Additive modifications to an existing, well-tested module. Integration points are fully mapped in ARCHITECTURE.md with line-number references.
+- **Phase 3 (Dry-Run Validation):** Extends an existing `dryRun` flag path. Purely additive return shape.
+- **Phase 4 (Context Envelope):** `execFileSync` with `git status --porcelain` and `ls -1` is verified working. Cap and redaction pattern is documented.
 
-Phases requiring validation before shipping (not additional research, but testing rigor):
-- **Phase 2 (secret redaction):** The 7-tier regex patterns from Semgrep/Gitleaks are MEDIUM confidence. Before merging, run each pattern against a fixture corpus (20+ real `.env` variable names including `DB_PASSWORD`, `GITHUB_PAT`, `OPENAI_KEY`, `STRIPE_SK_LIVE`) and 20+ benign commands. Assert negative cases (`TOKEN_COUNT=5`, file paths) are not redacted.
+All four phases are well-understood with implementation patterns verified by direct codebase inspection. No phases require research-phase during planning.
 
 ---
 
@@ -131,48 +127,42 @@ Phases requiring validation before shipping (not additional research, but testin
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | `Intl.Segmenter` tested on Node 25.6.1; existing codebase directly inspected; ESM incompatibility confirmed via npm registry; Snyk supply-chain concern independently sourced |
-| Features | HIGH | Feature list derived from direct codebase gap analysis; table stakes confirmed against Docker/Git/npm CLI conventions; headless completeness verified by reading `headless.js` directly |
-| Architecture | HIGH | All claims from direct code inspection of current implementation; build order verified against module dependency graph; all anti-patterns identified from existing code |
-| Pitfalls | HIGH | Critical pitfalls from direct code analysis of `sanitize.js`, `preview.js`, `headless.js`, `format.js`; regex pitfalls from `parseInt` MDN; Unicode pitfalls from Node.js UTF-16 documentation and `Intl.Segmenter` verification |
+| Stack | HIGH | All APIs verified by direct runtime test on Node.js 25.6.1; no new dependencies; `execFileSync` and `fs` behaviour confirmed |
+| Features | HIGH | Feature set validated against Warp AI, GitHub Copilot CLI, Spotify coding agent patterns; all four features have confirmed integration points in existing codebase |
+| Architecture | HIGH | All claims from direct code inspection of `dispatcher/index.js`, `sanitize.js`, `preview.js`, `state.cjs`; integration boundaries mapped with line numbers |
+| Pitfalls | HIGH | 10 pitfalls sourced from real bug reports (Gemini CLI race condition issue #18504, Claude Code session issue #24125) and direct gap analysis of existing sanitizer code paths |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Secret pattern regex accuracy (MEDIUM):** The 7 pattern tiers are sourced from Semgrep blog and Gitleaks documentation — credible but not independently verified against Node.js regex engine behavior. Mitigate by running fixture corpus tests during Phase 2 before merging.
+- **`--force` stripping scope in `sanitize.js`:** Research identified that the current regex may strip user-intended `--force` flags (e.g., `git push --force`) alongside GSD's own dispatch-level flag. Needs a focused code review of the stripping regex before Phase 3 work begins. Resolution: read `sanitize.js` at phase planning time and scope the regex fix precisely.
 
-- **`ps` secret exposure (KNOWN LIMITATION):** Commands containing secrets passed as CLI arguments are visible in `ps aux` for the process lifetime via `child_process.exec`. Accepted limitation for v1.1.0. Add an explicit code comment near the runner and surface it in the Phase 2 summary.
+- **`isRecoverable` classifier threshold:** The recommended heuristic (`code > 0 && code <= 127 && stderr.length > 0`) is a reasonable starting point, but exact boundaries for exit codes 125-127 may need tuning based on observed failures. Resolution: implement with the documented heuristic and adjust within the same phase.
 
-- **East Asian Ambiguous characters (DEFERRED):** `Intl.Segmenter` handles ZWJ sequences and regional indicators correctly but East Asian Ambiguous-width characters (Unicode UAX #11 category "A") remain terminal-dependent. Narrow-width treatment is the correct conservative default. Add a code comment in `format.js` noting the limitation; no action needed for v1.1.0.
+- **Session file location discrepancy:** STACK.md and FEATURES.md each suggest slightly different paths (`.planning/session.json` vs `.codex-session/history.jsonl`). ARCHITECTURE.md resolves this in favor of `.planning/session.json` to match the existing workspace memory convention. Confirm in the Phase 1 plan.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Direct codebase inspection (2026-02-24): `selector/format.js`, `selector/headless.js`, `selector/index.js`, `dispatcher/sanitize.js`, `dispatcher/preview.js`, `dispatcher/index.js`, `dispatcher/edit.js`
-- Node.js `Intl.Segmenter` — locally tested on Node 25.6.1; ZWJ family emoji returns correct width 2; existing char-loop returns 8
-- Phase context documents: `08-CONTEXT.md`, `09-CONTEXT.md`, `7-CONTEXT.md`, phase summaries 08-01, 08-02, 09-01, 09-02
-- `.planning/PROJECT.md` v1.1 requirements
-- `.planning/codebase/ARCHITECTURE.md`, `CONCERNS.md`
-- Node.js `process.stdout.columns` documentation — undefined in non-TTY confirmed
-- JavaScript `parseInt` MDN reference — partial parse behaviour confirmed
+- Direct runtime verification: Node.js 25.6.1 — `child_process.exec`, `execFileSync`, `fs`, `path`, `os` all confirmed importable and functional
+- Direct code inspection: `dispatcher/index.js` lines 8-19 (runner captures stderr), lines 84-87 (existing dryRun path)
+- Direct code inspection: `dispatcher/sanitize.js` — `sanitized.sanitizedCommand`, `sanitized.redactions`, `sanitized.status` all computed before dryRun guard
+- Direct code inspection: `state.cjs` — synchronous `fs.readFileSync`/`fs.writeFileSync` on `.planning/` as established codebase convention
+- `.planning/PROJECT.md` — v1.2 feature list, zero external deps constraint, CWD boundary requirement
 
 ### Secondary (MEDIUM confidence)
-- [Node.js 25.4.0 stable require(esm)](https://socket.dev/blog/node-js-25-4-0-ships-with-stable-require-esm) — confirmed require(esm) stable in Node 25+
-- [Snyk: supply chain concern of string-width-cjs](https://snyk.io/blog/supply-chain-string-width-cjs-npm/) — documented concerns with `string-width-cjs` fork
-- [secrets-patterns-db](https://github.com/mazen160/secrets-patterns-db) — largest open-source regex database for secret detection
-- [Semgrep: Secrets Story — prefixed secrets detection ordering](https://semgrep.dev/blog/2025/secrets-story-and-prefixed-secrets/)
-- [Gitleaks — 160+ secret type patterns](https://gitleaks.io/)
-- [GitHub Secret Scanning Updates — November 2025](https://github.blog/changelog/2025-12-02-secret-scanning-updates-november-2025/)
-- [Trevor Stenson: Keeping Secrets Out of Your Agent's Context](https://trevo.rs/agent-redaction) — ordered pattern tiers for agent redaction
-- [lirantal/nodejs-cli-apps-best-practices](https://github.com/lirantal/nodejs-cli-apps-best-practices) — env var detection and destructive confirmation conventions
-- [string-width npm](https://www.npmjs.com/package/string-width) — confirmed ESM-only from v5+; v4.2.3 last CJS release
-- [micromatch GitHub](https://github.com/micromatch/micromatch) — confirmed CJS-compatible; not needed for v1.1.0
+- Gemini CLI issue #18504 — race condition in atomic write with fixed temp filenames; informed atomic write pattern recommendation
+- Claude Code issue #24125 — race condition in session storage path initialization
+- Manus context engineering blog — context size vs. agent quality tradeoff; supports 2KB cap recommendation
+- Spotify Engineering (Dec 2025) — feedback loops in background coding agents; confirms session memory pattern
+- GitHub Copilot CLI changelog (Jan 2026) — context management patterns; confirms context envelope calling convention
+- agentic-patterns.com — coding agent CI feedback loop; confirms recovery bridge design pattern
 
-### Tertiary (LOW confidence)
-- [100 Regex Patterns for Secrets](https://blogs.jsmon.sh/100-regex-patterns/) — credential pattern reference; needs fixture-corpus validation before use in production patterns
+### Tertiary (LOW confidence — informational only)
+- Warp AI terminal, OpenClaw agent, Pydantic-AI coding agent articles — comparative feature patterns (not primary implementation sources)
 
 ---
 *Research completed: 2026-02-24*

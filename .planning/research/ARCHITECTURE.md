@@ -1,472 +1,544 @@
 # Architecture Research
 
-**Domain:** CLI selection and security enhancements for AI-assisted workflows (v1.1)
+**Domain:** Agent-to-local feedback loop — v1.2 integration with existing dispatcher/selector
 **Researched:** 2026-02-24
-**Confidence:** HIGH
+**Confidence:** HIGH — all claims based on direct inspection of the live codebase
 
-## Standard Architecture
+---
 
-### System Overview — v1.0 Baseline (Shipped)
+## Context: What This Document Covers
 
-The following components are fully implemented and passing tests after v1.0:
+This document replaces the v1.1 ARCHITECTURE.md for the v1.2 milestone. It focuses exclusively on how four new features integrate with the existing `dispatcher/` and `selector/` subsystems:
+
+- **STDERR Recovery Bridge** — capture dispatch failures, route to agent for fix suggestions
+- **Incremental Context Loading** — agents inspect command output before generating next selection
+- **Session Persistence** — maintain last 3 actions as local workspace memory
+- **Agent Dry-Run Validation** — simulate commands through dispatcher with sanitized preview before confirmation
+
+The v1.1 architecture (normalizer.js, commands.js constants, secret redaction, headless.js) is fully shipped and stable. v1.2 builds on top of it without modifying v1.1 foundations.
+
+---
+
+## Current System Overview (v1.1 Baseline)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                          Prompts / Agents Layer                      │
-│  Markdown/TOML prompts enforce numbered schema in AI output          │
-│  (no dedicated normalizer module yet — gap identified for v1.1)      │
-└──────────────────────────┬───────────────────────────────────────────┘
-                           │ numbered entries [{id,label,value,payload}]
-┌──────────────────────────▼───────────────────────────────────────────┐
-│                    selector/index.js  (selectOption)                  │
-│  • Renders numbered list via format.js helpers                        │
-│  • Headless shortcut via headless.js                                 │
-│  • readline loop with 0-to-exit and out-of-range retry               │
-│  • Returns picked entry (or {id:0, actionable:false} for cancel)     │
-└──────────────────────────┬───────────────────────────────────────────┘
-                           │ selected entry
-┌──────────────────────────▼───────────────────────────────────────────┐
-│                   dispatcher/index.js  (dispatchSelection)            │
-│  • Unpacks payload, builds action struct                             │
-│  • sanitizeAction() — workspace boundary + allowlist/blocklist       │
-│  • renderPreview() — highlights destructive terms, mini-diff, meta   │
-│  • editCommand() — inline readline or $EDITOR on block               │
-│  • confirm() gate for mutating actions                               │
-│  • defaultRunner via child_process.exec                              │
+│                      Prompts / Agents Layer                          │
+│  Markdown/TOML prompts; AI generates numbered-list output            │
+└──────────────────────┬───────────────────────────────────────────────┘
+                       │ raw AI text
+┌──────────────────────▼───────────────────────────────────────────────┐
+│               selector/normalizer.js  (v1.1, stable)                 │
+│  Re-index AI output → sequential entries[]                           │
+└──────────────────────┬───────────────────────────────────────────────┘
+                       │ entries[] {id, label, value, payload, metadata}
+┌──────────────────────▼───────────────────────────────────────────────┐
+│               selector/index.js  (v1.0, stable)                      │
+│  Headless shortcut → handleHeadless(); TTY readline loop             │
+└──────────────────────┬───────────────────────────────────────────────┘
+                       │ selected entry
+┌──────────────────────▼───────────────────────────────────────────────┐
+│               dispatcher/index.js — dispatchSelection()              │
+│  sanitizeAction → renderPreview → confirm → runner                   │
+│  dryRun flag already present (opts.dryRun)                           │
+│  runner returns {code, stdout, stderr}                               │
 └──────────────────────────────────────────────────────────────────────┘
+                       │ {ran, result: {code, stdout, stderr}}
+                       │ (result currently unused by caller)
+                       ▼
+                 caller discards result
 ```
 
-### Sub-module Breakdown
+The critical gap for v1.2: `dispatchSelection` returns `{ran, result}` but callers discard it. The `result.stderr` from a failed run is never fed back to the agent. The session has no memory of prior actions. Dry-run is wired in `dispatchSelection` but produces no structured preview artifact for agent consumption.
+
+---
+
+## Standard Architecture
+
+### System Overview — v1.2 Target State
 
 ```
-get-shit-done/bin/lib/
-├── selector/
-│   ├── index.js          # selectOption() — public entry point
-│   ├── format.js         # stripAnsi, stringWidth, truncateLabel, formatMenuItem
-│   ├── headless.js       # handleHeadless() — --select flag / GS_DONE_SELECT env
-│   └── __tests__/
-│       ├── selector.test.js
-│       ├── format.test.js
-│       └── headless.test.js
-└── dispatcher/
-    ├── index.js          # dispatchSelection() — public entry point
-    ├── sanitize.js       # sanitizeAction(), redactSecrets(), workspace checks
-    ├── preview.js        # renderPreview(), highlightDestructive(), confirm()
-    ├── edit.js           # editCommand() — inline edit or $EDITOR on block
-    └── __tests__/
-        ├── dispatcher.test.js
-        └── sanitize.test.js
+┌────────────────────────────────────────────────────────────────────────┐
+│                       Prompts / Agents Layer                           │
+│  Agents receive: context snapshot + last-N session actions +           │
+│  stderr feedback on failure + dry-run preview before commit            │
+└───────────────────────┬────────────────────────────────────────────────┘
+                        │ raw AI text
+┌───────────────────────▼────────────────────────────────────────────────┐
+│            selector/normalizer.js  (unchanged v1.1)                    │
+└───────────────────────┬────────────────────────────────────────────────┘
+                        │ entries[]
+┌───────────────────────▼────────────────────────────────────────────────┐
+│            selector/index.js  (unchanged v1.0)                         │
+└───────────────────────┬────────────────────────────────────────────────┘
+                        │ selected entry
+┌───────────────────────▼────────────────────────────────────────────────┐
+│            dispatcher/index.js — dispatchSelection()                   │
+│            [MODIFIED: dry-run returns structured preview artifact]     │
+└───────────────────────┬────────────────────────────────────────────────┘
+          ┌─────────────┴────────────────────┐
+          │ dryRun=true                       │ dryRun=false
+          ▼                                   ▼
+┌─────────────────────┐           ┌─────────────────────────────────────┐
+│ dispatcher/         │           │         runner executes              │
+│ preview.js          │           │  {code, stdout, stderr} returned     │
+│ (sanitized preview) │           └───────────────┬─────────────────────┘
+│ returns             │                           │
+│ DryRunResult struct │           ┌───────────────▼──────────────┐
+└─────────────────────┘           │ dispatcher/stderr-bridge.js   │
+                                  │ [NEW] on code !== 0:          │
+                                  │ format stderr + context →     │
+                                  │ structured RecoveryPayload    │
+                                  └───────────────┬───────────────┘
+                                                  │ RecoveryPayload
+                                  ┌───────────────▼───────────────┐
+                                  │ session/store.js  [NEW]        │
+                                  │ append action record (last-3)  │
+                                  │ write to .planning/session.json│
+                                  └───────────────────────────────┘
 ```
+
+---
 
 ### Component Responsibilities
 
-| Component | Responsibility | v1.0 Status |
+| Component | Responsibility | v1.2 Status |
 |-----------|---------------|-------------|
-| `selector/format.js` | ANSI stripping, Unicode-aware width, truncation, menu item formatting | COMPLETE |
-| `selector/headless.js` | `--select`/`GS_DONE_SELECT` preselection, audit logging to stderr | COMPLETE |
-| `selector/index.js` | Entry point: headless shortcut, TTY render loop, 0-to-exit | COMPLETE |
-| `dispatcher/sanitize.js` | Workspace boundary, allowlist/blocklist, gray-area gate, secret redaction | COMPLETE (gaps identified) |
-| `dispatcher/preview.js` | Destructive term highlighting, mini-diff, metadata toast | COMPLETE (gaps identified) |
-| `dispatcher/edit.js` | Inline readline edit or `$EDITOR` on blocked command | COMPLETE |
-| `dispatcher/index.js` | Orchestrates sanitize → preview → confirm → run pipeline | COMPLETE |
-| Normalizer (standalone) | Re-index skipped/duplicate AI-numbered output to 1..N | **MISSING — v1.1 gap** |
+| `selector/format.js` | ANSI stripping, Unicode-aware width, truncation | STABLE (v1.1) |
+| `selector/headless.js` | Headless preselection, audit log to stderr | STABLE (v1.1) |
+| `selector/normalizer.js` | Re-index AI numbered output → sequential entries[] | STABLE (v1.1) |
+| `selector/index.js` | Entry point: headless shortcut, TTY loop | STABLE (v1.0) |
+| `dispatcher/commands.js` | Shared constants: BLOCKED, GRAY, patterns | STABLE (v1.1) |
+| `dispatcher/sanitize.js` | Workspace boundary, secret redaction | STABLE (v1.1) |
+| `dispatcher/preview.js` | Destructive highlighting, confirmation, dry-run output | MODIFIED: structured DryRunResult |
+| `dispatcher/edit.js` | Inline readline or $EDITOR on blocked command | STABLE (v1.0) |
+| `dispatcher/index.js` | Orchestrates full pipeline; returns result to caller | MODIFIED: structured return, feeds bridge |
+| `dispatcher/stderr-bridge.js` | Capture stderr from failed runs; emit RecoveryPayload | NEW |
+| `session/store.js` | Ring buffer of last-3 actions; read/write `.planning/session.json` | NEW |
 
 ---
 
-## v1.1 Integration Analysis
-
-### What v1.1 Changes
-
-v1.1 adds four feature areas. Each maps to modifications or new components in the existing structure.
-
-#### 1. Auto-Reindexing (Normalizer Gap)
-
-**Current state:** `selectOption` accepts pre-built `entries[]` and uses `entries.find(e => e.id === num)` for lookup. The contract assumes caller-supplied IDs are already sequential. No module normalizes raw AI output into sequentially indexed entries.
-
-**Gap:** When AI output skips numbers (e.g., 1, 2, 4) or has duplicates, callers must handle re-indexing themselves. Phase 7 context decision mandates silent re-index when numbers skip and ≥2 options remain, and hard-fail + single retry on duplicate leading numbers.
-
-**Where this lives:** A new `selector/normalizer.js` module. It sits between the Prompts layer and `selectOption`, transforming raw AI text lines into a validated, sequentially indexed `entries[]` array.
-
-**Integration point with index.js:** `selectOption` does NOT need to change. The normalizer produces clean `entries[]` before calling `selectOption`. Callers who previously passed raw AI lines must route through the normalizer first.
+## Recommended Project Structure
 
 ```
-AI text output
-    │
-    ▼
-selector/normalizer.js  (NEW for v1.1)
-    • Accept raw numbered lines (string[]) or parsed JSON
-    • Filter: keep only lines matching /^\d+\.\s+.+$/
-    • Re-index silently if numbers skip (≥2 valid lines)
-    • Hard-fail + single retry hint if duplicates detected
-    • Return: [{id:1, label, value, actionable, payload?, metadata?}]
-    │
-    ▼
-selectOption(entries)   (unchanged)
+get-shit-done/bin/lib/
+├── selector/                     # (unchanged from v1.1)
+│   ├── index.js
+│   ├── normalizer.js
+│   ├── format.js
+│   ├── headless.js
+│   └── __tests__/
+│       ├── format.test.js
+│       ├── headless.test.js
+│       ├── normalizer.test.js
+│       └── selector.test.js
+├── dispatcher/
+│   ├── index.js                  # MODIFIED: structured return, dry-run result, bridge call
+│   ├── commands.js               # (unchanged from v1.1)
+│   ├── sanitize.js               # (unchanged from v1.1)
+│   ├── preview.js                # MODIFIED: dry-run returns DryRunResult struct
+│   ├── edit.js                   # (unchanged)
+│   ├── stderr-bridge.js          # NEW: failure capture + RecoveryPayload formatting
+│   └── __tests__/
+│       ├── dispatcher.test.js    # MODIFIED: test structured return, dry-run result
+│       ├── sanitize.test.js      # (unchanged)
+│       └── stderr-bridge.test.js # NEW
+└── session/                      # NEW directory
+    ├── store.js                  # Ring buffer, read/write session.json
+    └── __tests__/
+        └── store.test.js         # NEW
 ```
 
-**New file:** `get-shit-done/bin/lib/selector/normalizer.js`
-**Modified files:** None in selector — callers update to invoke normalizer first.
+### Structure Rationale
 
----
-
-#### 2. Enhanced Secret Patterns
-
-**Current state:** `sanitize.js` `redactSecrets()` handles:
-```javascript
-/\b([A-Z0-9_]*(API_KEY|TOKEN|SECRET))=([^\s]+)/g
-```
-
-This covers `SERVICE_API_KEY=...`, `AUTH_TOKEN=...`, `APP_SECRET=...` but misses:
-- `PASSWORD=`, `PASSWD=`, `DB_PASS=`
-- `PRIVATE_KEY=`, `RSA_KEY=`
-- `CONNECTION_STRING=`, `DATABASE_URL=`, `REDIS_URL=`
-- Lowercase variants: `api_key=`, `token=`
-- Values after `Bearer ` or `-H "Authorization: `
-- Values embedded in URLs: `postgres://user:password@host`
-
-**Where this lives:** Modify `dispatcher/sanitize.js` `redactSecrets()` only. No structural change.
-
-**Change type:** Expand regex patterns in the existing function. Extract patterns to a named constant `SECRET_PATTERNS` array for testability.
-
-**Integration point:** `redactSecrets` is called in `sanitizeAction()` before preview. No callers change — the interface (`{redacted, replacements}`) stays the same.
-
-**Suggested pattern expansion:**
-```javascript
-// In sanitize.js — expanded SECRET_PATTERNS constant
-const SECRET_PATTERNS = [
-  // KEY=value assignments (existing + expanded)
-  /\b([A-Z0-9_]*(API_KEY|TOKEN|SECRET|PASSWORD|PASSWD|PASS|PRIVATE_KEY|AUTH|CREDENTIAL|CERT|CONNECTION_STRING))=([^\s'"]+)/gi,
-  // Bearer tokens in headers
-  /(Bearer\s+)([A-Za-z0-9\-._~+/]+=*)/g,
-  // Authorization header values
-  /(Authorization:\s*(?:Basic|Bearer|Token)\s+)([^\s'"]+)/gi,
-  // Credentials in URLs (postgres://user:pass@host)
-  /((?:postgres|mysql|mongodb|redis|amqp):\/\/[^:]+:)([^@\s]+)(@)/g,
-];
-```
-
-**Modified files:** `dispatcher/sanitize.js`, `dispatcher/__tests__/sanitize.test.js`
-
----
-
-#### 3. Destructive Command Detection
-
-**Current state:** Two separate concerns with inconsistent coverage:
-
-- `preview.js` `DESTRUCTIVE_TERMS`: `['rm', 'truncate', 'drop', 'overwrite', '--force', '-rf']` — visual highlighting only
-- `sanitize.js` `BLOCKED`: `Set(['sudo', 'chown', 'chmod', 'mkfs', 'dd'])` — execution blocking
-- `sanitize.js` `GRAY`: `Set(['git push', 'npm publish', ...])` — force-dispatch gate
-
-The two modules have overlapping but inconsistent views of "destructive". `preview.js` highlights `rm` and `--force` but `sanitize.js` allows `rm` (it's not in BLOCKED). The confirmation heuristic in `dispatcher/index.js` also does its own regex:
-```javascript
-/rm|mv|cp|push|write|append|truncate|npm publish|git push/.test(action.command)
-```
-
-**Gap:** Three places define "destructive" independently. They must be consolidated into a single source of truth.
-
-**Where this lives:** Extract a shared `dispatcher/commands.js` constants module that all three callers import. No structural change beyond adding the shared module.
-
-**New file:** `get-shit-done/bin/lib/dispatcher/commands.js`
-
-```javascript
-// dispatcher/commands.js — single source of truth for command policies
-const BLOCKED_COMMANDS = new Set(['sudo', 'chown', 'chmod', 'mkfs', 'dd', 'curl | bash', 'wget | sh']);
-const GRAY_COMMANDS = new Set(['git push', 'npm publish', 'pnpm publish', 'yarn publish']);
-const DESTRUCTIVE_HIGHLIGHT_TERMS = ['rm', 'truncate', 'drop', 'overwrite', '--force', '-rf', '-f', 'delete', 'purge', 'wipe'];
-const MUTATING_PATTERN = /\b(rm|mv|cp|push|write|append|truncate|delete|purge|wipe)\b|npm publish|git push/i;
-
-module.exports = { BLOCKED_COMMANDS, GRAY_COMMANDS, DESTRUCTIVE_HIGHLIGHT_TERMS, MUTATING_PATTERN };
-```
-
-**Modified files:**
-- `dispatcher/sanitize.js` — replace inline sets with imports from `commands.js`
-- `dispatcher/preview.js` — replace `DESTRUCTIVE_TERMS` array with import from `commands.js`
-- `dispatcher/index.js` — replace inline `mutating` regex with `MUTATING_PATTERN` import
-
----
-
-#### 4. --select Flag Standardization
-
-**Current state:** `headless.js` already implements `--select <N>` and `--select=N` formats with `GS_DONE_SELECT` fallback. Implementation is complete and tested.
-
-**Gap (if any):** The `--select` arg detection reads from `opts.args || process.argv` — callers that construct custom args arrays must pass them explicitly. Any callers that directly invoke `selectOption` without passing `opts.args` will use `process.argv` correctly only if they are top-level scripts. Nested or piped invocations may behave unexpectedly.
-
-**Where this lives:** No new module needed. Document the calling contract clearly:
-- Callers must pass `opts.args = process.argv` (or a test-controlled args array) to `selectOption`.
-- The env fallback `GS_DONE_SELECT` should be sourced from `opts.env = process.env` (already wired).
-
-**Possible refinement:** Add a `--select` parse utility to `selector/headless.js` that can be called standalone for callers who manage their own flag parsing, enabling composition without requiring `selectOption` to own arg parsing.
-
-**Modified files:** Minimal — possibly `selector/headless.js` to export a `parseSelectFlag(args, env)` helper for standalone use. `selector/index.js` unchanged.
-
----
-
-#### 5. Unicode-Aware Padding
-
-**Current state:** `format.js` `formatMenuItem` right-aligns the ID number using `String(id).padStart(maxDigits, ' ')` — this is correct since IDs are always ASCII digits. The label truncation uses `stringWidth` correctly. However, padding after truncation for visual column alignment is not applied — the function returns `prefix + truncatedLabel` with no right-padding to a fixed column width.
-
-**Gap:** When rendering a list where labels have varying visual widths (mix of ASCII and CJK), there is no right-padding to align suffixes (e.g., type tags or status icons if added in future). Current truncation ensures labels do NOT exceed maxWidth, but no padding fills the space to the right.
-
-**Where this lives:** Modify `format.js` `formatMenuItem` only, or add an optional `padToWidth` parameter.
-
-**Change type:** Add a `padLabel(str, targetWidth)` helper in `format.js` that pads using `stringWidth` to account for double-wide characters:
-
-```javascript
-// format.js addition
-function padLabel(str, targetWidth) {
-  const current = stringWidth(str);
-  const needed = Math.max(0, targetWidth - current);
-  return str + ' '.repeat(needed);
-}
-```
-
-`formatMenuItem` gains an optional `padToWidth` flag. When false (default), behavior is unchanged. When true, the label is padded to fill `availableWidth` after truncation.
-
-**Modified files:** `selector/format.js`, `selector/__tests__/format.test.js`
-
----
-
-## Complete v1.1 Change Map
-
-### New Files
-
-| File | Purpose | Depends On |
-|------|---------|------------|
-| `selector/normalizer.js` | Re-index AI output → sequential entries[] | `selector/format.js` (stripAnsi for validation) |
-| `dispatcher/commands.js` | Shared constants: BLOCKED, GRAY, DESTRUCTIVE_TERMS, MUTATING_PATTERN | None |
-
-### Modified Files
-
-| File | Changes | Touches |
-|------|---------|---------|
-| `dispatcher/sanitize.js` | Import BLOCKED/GRAY from commands.js; expand `redactSecrets` patterns | `commands.js` |
-| `dispatcher/preview.js` | Import DESTRUCTIVE_TERMS from commands.js | `commands.js` |
-| `dispatcher/index.js` | Import MUTATING_PATTERN from commands.js; replace inline regex | `commands.js` |
-| `selector/format.js` | Add `padLabel()` helper; optional `padToWidth` to `formatMenuItem` | None |
-| `selector/headless.js` | Optionally export standalone `parseSelectFlag(args, env)` | None |
-
-### Unchanged Files
-
-| File | Reason Stable |
-|------|--------------|
-| `selector/index.js` | `selectOption` contract unchanged; normalizer sits above it |
-| `dispatcher/edit.js` | No changes in scope |
-
----
-
-## Data Flow — v1.1 Updated
-
-### Interactive Path
-
-```
-AI text output (numbered lines)
-    │
-    ▼
-selector/normalizer.js          [NEW]
-    • Validate /^\d+\.\s+.+$/ lines
-    • Re-index skipped numbers → 1..N
-    • Hard-fail + retry hint on duplicates
-    │
-    ▼
-selectOption(entries, opts)     [unchanged]
-    • Headless shortcut (headless.js)
-    • format.js → formatMenuItem with Unicode-aware width
-    │
-    ▼
-dispatchSelection(selection)    [modified — imports from commands.js]
-    │
-    ├──► sanitizeAction()       [modified — expanded secrets, shared constants]
-    │       • Workspace boundary check
-    │       • BLOCKED / GRAY from commands.js
-    │       • redactSecrets() — expanded patterns
-    │
-    ├──► renderPreview()        [modified — DESTRUCTIVE_TERMS from commands.js]
-    │       • highlightDestructive() uses shared terms
-    │       • mini-diff if payload.diff exists
-    │
-    └──► runner(action)
-```
-
-### Headless Path
-
-```
---select N  or  GS_DONE_SELECT=N
-    │
-    ▼
-handleHeadless(entries, args, env)    [unchanged; optional parseSelectFlag export]
-    • Menu dumped to stderr
-    • Audit log: "[Headless] Selected: N (Label)"
-    • Valid → {exitCode:0, result: entry}
-    • Invalid → {exitCode:1}
-    │
-    ▼
-dispatchSelection(selection)          [same flow as interactive above]
-```
-
----
-
-## Component Boundary Rules
-
-These boundaries must not be violated during v1.1 implementation:
-
-| Boundary | Rule |
-|----------|------|
-| `selector/` ↔ `dispatcher/` | Selector knows nothing about dispatch. The only data crossing is the entry struct: `{id, label, value, actionable, payload?, metadata?}`. |
-| `normalizer.js` scope | Normalizer converts raw text → clean entries[]. It does NOT validate payload content or action safety — that is dispatcher's job. |
-| `commands.js` scope | Constants only. No logic, no imports. Both dispatcher sub-modules import from it; nothing else does. |
-| `sanitize.js` redaction | `redactSecrets()` returns `{redacted, replacements}`. The `replacements` array preserves originals for execution. The caller (`dispatchSelection`) passes `sanitized.sanitizedCommand` (redacted) to `renderPreview` and the original `action.command` to `runner`. This must not change. |
-| `format.js` width logic | `stringWidth` is the single source of truth for visual width. Any padding/truncation must use it, never `.length`. |
+- **`dispatcher/stderr-bridge.js`** lives in `dispatcher/` because it post-processes a runner result — it is the final stage of the dispatch pipeline. It has no dependency on the selector.
+- **`session/store.js`** gets its own directory because it is a cross-cutting concern used by both the dispatcher (to record actions after run) and by prompt/agent callers (to read context before generating next selection). Putting it in `dispatcher/` would create an upward dependency violation if the selector ever needed to read session context.
+- **No changes to `selector/`** — the selector remains ignorant of execution outcomes and session state. This preserves the clean selector↔dispatcher boundary from v1.0/v1.1.
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: Shared Constants Module (commands.js)
+### Pattern 1: Structured Return from dispatchSelection
 
-**What:** Extract co-located but inconsistently duplicated constants (command sets, regex patterns) into a single-purpose constants module imported by all consumers.
+**What:** `dispatchSelection` currently returns `{ran, dryRun, cancelled, reason, result}` where `result` is the raw `{code, stdout, stderr}` from the runner. Callers ignore it. v1.2 promotes `result` to a first-class return value that callers must handle.
 
-**When to use:** When the same conceptual list (e.g., "destructive verbs") appears in multiple modules and drift between them would cause inconsistent behavior.
+**When to use:** Any caller that needs to feed runner output back to an agent.
 
-**Trade-offs:** Adds one more require() per module. For a CJS codebase of this size, that is negligible. The benefit is that updating `DESTRUCTIVE_HIGHLIGHT_TERMS` in one place propagates to both preview highlighting and confirmation gating.
-
-**Example:**
-```javascript
-// dispatcher/commands.js
-const BLOCKED_COMMANDS = new Set(['sudo', 'chown', 'chmod', 'mkfs', 'dd']);
-const DESTRUCTIVE_HIGHLIGHT_TERMS = ['rm', 'truncate', '--force', '-rf', 'drop', 'delete'];
-module.exports = { BLOCKED_COMMANDS, DESTRUCTIVE_HIGHLIGHT_TERMS };
-
-// dispatcher/sanitize.js
-const { BLOCKED_COMMANDS } = require('./commands');
-
-// dispatcher/preview.js
-const { DESTRUCTIVE_HIGHLIGHT_TERMS } = require('./commands');
-```
-
-### Pattern 2: Above-the-selector Normalization
-
-**What:** Keep the selector itself dumb about AI output format. All normalization (re-indexing, filtering, retry logic) happens in a module that sits between the AI output and `selectOption`.
-
-**When to use:** Any time input quality is variable (AI-generated numbered lists).
-
-**Trade-offs:** Adds an explicit caller step (`normalizer.normalize(rawLines)` before `selectOption`). Makes both modules independently testable. The selector's tests never need to model bad AI output.
+**Trade-offs:** Callers that currently discard the return value will continue to work (the return shape is additive). New callers opt in to the richer result by reading `result.stderr` and `result.code`.
 
 **Example:**
 ```javascript
-// Caller code
-const { normalize } = require('./selector/normalizer');
-const { selectOption } = require('./selector');
+// dispatcher/index.js (modified return)
+const res = await runner({ ...action, command: action.command });
+const runResult = { code: res.code, stdout: res.stdout, stderr: res.stderr };
 
-const entries = normalize(agentOutput); // may throw on unrecoverable input
-const selection = await selectOption(entries, opts);
+// Feed to session store and stderr bridge (new in v1.2)
+sessionStore.append({ command: action.command, result: runResult, timestamp: Date.now() });
+
+return {
+  ran: true,
+  dryRun: false,
+  result: runResult,                          // promoted — was already there
+  recovery: runResult.code !== 0
+    ? stderrBridge.buildPayload(action, runResult)
+    : null,                                   // new: null on success, RecoveryPayload on failure
+};
 ```
-
-### Pattern 3: Redact-for-Display, Execute-Original
-
-**What:** The sanitizer produces two versions of the command: `sanitizedCommand` (with secrets redacted) for display in preview, and the original `action.command` for actual execution. These must never be swapped.
-
-**When to use:** Everywhere secrets may appear in shell commands (API keys, tokens, URLs with credentials).
-
-**Trade-offs:** Requires callers to track which version is for display and which for execution. The current `dispatchSelection` gets this right: `renderPreview` receives `sanitized.sanitizedCommand`; `runner` receives `action.command`. This must be preserved when dispatcher/index.js is modified.
 
 ---
 
-## Suggested Build Order
+### Pattern 2: STDERR Recovery Bridge (stderr-bridge.js)
 
-Dependencies between the v1.1 changes determine the correct sequence:
+**What:** A new module that accepts a failed action and its runner result, formats the stderr into a structured `RecoveryPayload`, and returns it to the caller. The caller (agent or workflow) decides how to handle recovery — the bridge only formats, never prompts.
+
+**When to use:** Whenever `runner` returns `code !== 0`. The bridge is called inside `dispatchSelection` after detecting failure. It never calls `runner` itself.
+
+**Trade-offs:** The bridge is passive — it produces a payload but does not re-run anything. This keeps the module simple and independently testable. Recovery strategy (retry? show to agent? ask user?) remains the caller's responsibility.
+
+**Interface:**
+```javascript
+// dispatcher/stderr-bridge.js
+
+/**
+ * Build a structured recovery payload from a failed dispatch.
+ * @param {object} action  — the action that was dispatched
+ * @param {object} result  — {code, stdout, stderr} from runner
+ * @returns {RecoveryPayload}
+ */
+function buildPayload(action, result) {
+  return {
+    command: action.command,
+    exitCode: result.code,
+    stderr: result.stderr,
+    stdout: result.stdout,
+    // Summarized hint for agent consumption (first 500 chars of stderr)
+    hint: result.stderr ? result.stderr.slice(0, 500).trim() : null,
+    timestamp: Date.now(),
+  };
+}
+
+module.exports = { buildPayload };
+```
+
+**Key constraint:** `stderr-bridge.js` has NO imports from `selector/`. Its only dependency is Node.js built-ins (none needed for v1 — pure data transformation). It does not write to disk; that is `session/store.js`'s job.
+
+---
+
+### Pattern 3: Session Store (session/store.js)
+
+**What:** A ring-buffer store (max 3 entries) that persists to `.planning/session.json`. Each entry is an action record: `{command, exitCode, stderr, stdout, timestamp}`. Entries are appended after each dispatch and trimmed to the last 3. The store is read by agents/prompts to provide context for the next selection.
+
+**When to use:** After every `dispatchSelection` call (both success and failure). The session.json file is the workspace memory that closes the agent-to-local loop.
+
+**Trade-offs:** File-based persistence means no memory leaks and natural durability across Claude Code sessions. Three entries is enough context for sequential debugging (last error, last success, prior state) without blowing token budgets when included in prompts.
+
+**Interface:**
+```javascript
+// session/store.js
+
+const MAX_ENTRIES = 3;
+
+/**
+ * Append an action record to the session store.
+ * Trims to MAX_ENTRIES (oldest first, newest last).
+ * @param {string} cwd
+ * @param {object} record — {command, exitCode, stderr, stdout, timestamp}
+ */
+function append(cwd, record) { ... }
+
+/**
+ * Read the current session entries (up to MAX_ENTRIES).
+ * Returns [] if file does not exist.
+ * @param {string} cwd
+ * @returns {object[]}
+ */
+function read(cwd) { ... }
+
+/**
+ * Clear the session store.
+ * @param {string} cwd
+ */
+function clear(cwd) { ... }
+
+module.exports = { append, read, clear };
+```
+
+**Storage path:** `.planning/session.json` — co-located with STATE.md and config.json to respect the existing convention that `.planning/` is the workspace memory directory. This means the store naturally lives within the CWD workspace boundary already enforced by the dispatcher.
+
+**No external dependencies.** Uses `node:fs` only.
+
+---
+
+### Pattern 4: Structured Dry-Run Result
+
+**What:** The existing `dryRun` path in `dispatchSelection` writes `"Skip execute: ..."` to stdout and returns `{ran: false, dryRun: true}`. v1.2 extends this to return a structured `DryRunResult` that includes the sanitized command preview, the sanitize status, and a flag for agent consumption.
+
+**When to use:** When an agent wants to validate a command through the full sanitize + preview pipeline before asking the user to confirm execution. The agent receives the dry-run result, displays it (or includes it in the next prompt), then re-runs with `dryRun: false` for actual execution.
+
+**Trade-offs:** Requires the caller to run `dispatchSelection` twice (once dry, once live) for validated execution. This is intentional — dry-run is a validation step, not a caching mechanism. The overhead is one extra pipeline pass with no runner invocation.
+
+**Modified return in `dispatchSelection`:**
+```javascript
+if (dryRun) {
+  // (existing stdout write preserved for backward compat)
+  output.write(`[dry-run] ${sanitized.sanitizedCommand || action.command}\n`);
+  return {
+    ran: false,
+    dryRun: true,
+    cancelled: false,
+    preview: {
+      command: sanitized.sanitizedCommand || action.command,
+      sanitizeStatus: sanitized.status,           // 'allow' | 'gray' | 'block'
+      mutating: MUTATING_PATTERN.test(action.command),
+      redactions: sanitized.replacements || [],   // secret fields that were redacted
+    },
+  };
+}
+```
+
+**Key constraint:** The `preview.command` in the dry-run result is the **redacted** version (safe for display/logging). This matches the existing redact-for-display, execute-original pattern from v1.1.
+
+---
+
+## Data Flow
+
+### v1.2 Complete Request Flow
 
 ```
-1. dispatcher/commands.js          [no deps — start here]
-       │
-       ├──► 2. dispatcher/sanitize.js   [imports commands.js; expand secret patterns]
-       │         └──► dispatcher/__tests__/sanitize.test.js   [update tests]
-       │
-       ├──► 3. dispatcher/preview.js    [imports commands.js; no logic change]
-       │
-       └──► 4. dispatcher/index.js      [imports commands.js MUTATING_PATTERN]
-                    └──► dispatcher/__tests__/dispatcher.test.js  [update if needed]
-
-5. selector/format.js              [add padLabel; independent of dispatcher]
-       └──► selector/__tests__/format.test.js   [update tests]
-
-6. selector/normalizer.js          [depends on format.js for stripAnsi; independent of dispatcher]
-       └──► selector/__tests__/normalizer.test.js   [new test file]
-
-7. selector/headless.js (optional) [standalone parseSelectFlag export if needed]
+[Agent generates numbered list]
+    │
+    ▼
+selector/normalizer.js
+    │ entries[]
+    ▼
+selector/index.js (selectOption)
+    │ selected entry
+    ▼
+dispatchSelection(selection, { dryRun: true, cwd })   ← OPTIONAL VALIDATION PASS
+    │
+    ├── sanitizeAction()
+    ├── [dry-run path] → return DryRunResult { preview: { command, sanitizeStatus, mutating, redactions } }
+    │
+    └── [agent reviews DryRunResult, decides to proceed]
+    │
+    ▼
+dispatchSelection(selection, { dryRun: false, cwd })  ← EXECUTION PASS
+    │
+    ├── sanitizeAction()
+    ├── renderPreview() → stdout
+    ├── confirm() if mutating
+    ├── runner() → { code, stdout, stderr }
+    │
+    ├── [success: code === 0]
+    │       ├── session/store.js.append(cwd, { command, exitCode:0, stdout, stderr, timestamp })
+    │       └── return { ran: true, result: { code, stdout, stderr }, recovery: null }
+    │
+    └── [failure: code !== 0]
+            ├── dispatcher/stderr-bridge.js.buildPayload(action, result) → RecoveryPayload
+            ├── session/store.js.append(cwd, { command, exitCode, stdout, stderr, timestamp })
+            └── return { ran: true, result: { code, stdout, stderr }, recovery: RecoveryPayload }
 ```
 
-**Rationale for this order:**
-- `commands.js` first because it has no dependencies and unblocks 3 dispatcher modifications in parallel.
-- Dispatcher changes (steps 2–4) can proceed independently of selector changes (steps 5–6) after step 1.
-- `normalizer.js` (step 6) last among selector changes because it depends only on `format.js` being stable.
-- `headless.js` (step 7) is optional and deferred; existing implementation is already correct.
+### Incremental Context Loading Flow
+
+```
+[Before generating next selection]
+    │
+    ▼
+session/store.js.read(cwd)
+    │ last-3 action records [{command, exitCode, stderr, stdout, timestamp}]
+    │
+    ▼
+[Caller/agent formats records into prompt context]
+    │ "Last 3 actions: [1] git add . (exit 0) [2] git commit ... (exit 128, stderr: ...)"
+    │
+    ▼
+[Agent generates next numbered list, informed by prior outcomes]
+```
+
+### State Management
+
+```
+.planning/session.json          ← session/store.js manages this
+.planning/STATE.md              ← state.cjs manages this (unchanged)
+.planning/config.json           ← config.cjs manages this (unchanged)
+```
+
+The session store is intentionally separate from STATE.md because:
+1. session.json is ephemeral workspace memory (last 3 actions, rewritten often)
+2. STATE.md is durable planning state (phase progress, decisions, blockers)
+3. Keeping them separate avoids parsing complexity and race conditions
+
+---
+
+## Integration Points with Existing Modules
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `dispatcher/index.js` → `stderr-bridge.js` | `buildPayload(action, result)` call | bridge is called inside dispatchSelection after runner; pure data transform, no I/O |
+| `dispatcher/index.js` → `session/store.js` | `append(cwd, record)` call | called after every runner invocation (success and failure); store handles file I/O |
+| `session/store.js` ← caller | `read(cwd)` call | agent/workflow reads context before generating next selection; store returns array |
+| `dispatchSelection` return | `{ran, dryRun, cancelled, result, recovery, preview}` | additive — existing callers unaffected; `recovery` and `preview` are new optional fields |
+| `selector/` modules | unchanged | no new dependencies on session or bridge modules |
+
+### What Does NOT Change
+
+| Module | Why Stable |
+|--------|-----------|
+| `selector/normalizer.js` | v1.2 features are post-dispatch; normalizer is pre-dispatch |
+| `selector/index.js` | No awareness of execution outcomes or session state |
+| `selector/headless.js` | No changes needed; headless path still routes through dispatchSelection |
+| `selector/format.js` | UI rendering only; no execution awareness |
+| `dispatcher/sanitize.js` | Dry-run validation uses existing sanitizeAction(); no changes needed |
+| `dispatcher/commands.js` | Constants unchanged |
+| `dispatcher/edit.js` | Blocked-command editing unchanged |
+| `state.cjs` | STATE.md operations unaffected |
+| `gsd-tools.cjs` router | No new top-level commands needed for v1.2 features |
+
+### New Dependency Graph
+
+```
+session/store.js
+  └── requires: node:fs, node:path   (no internal deps)
+
+dispatcher/stderr-bridge.js
+  └── requires: (none — pure data transform)
+
+dispatcher/index.js (modified)
+  └── requires: (existing) sanitize, preview, edit, commands
+  └── requires: (new) ./stderr-bridge
+  └── requires: (new) ../session/store
+```
+
+**The session/store path from dispatcher/index.js:** `require('../session/store')` — the `session/` directory is a sibling of `dispatcher/` under `lib/`. This is the only new cross-directory dependency introduced in v1.2.
 
 ---
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Duplicating Command Lists
+### Anti-Pattern 1: Retrying Inside the Bridge
 
-**What people do:** Add a new destructive term to `preview.js`'s `DESTRUCTIVE_TERMS` but forget to update the `mutating` regex in `dispatcher/index.js`.
+**What people do:** Make `stderr-bridge.js` re-invoke `runner` with a corrected command as an attempt at auto-recovery.
 
-**Why it's wrong:** The system highlights the command as dangerous but does not prompt for confirmation — false security.
+**Why it's wrong:** Auto-retry on STDERR creates a recursive failure loop. The bridge has no context about whether a retry is safe, idempotent, or desired. It bypasses the confirm gate for mutating commands.
 
-**Do this instead:** All destructive/mutating term definitions live in `commands.js`. Every module that needs them imports from there.
-
-### Anti-Pattern 2: Passing Redacted Command to Runner
-
-**What people do:** Pass `sanitized.sanitizedCommand` (which has `[REDACTED]` placeholders) to `runner()` instead of the original `action.command`.
-
-**Why it's wrong:** The command will fail because `[REDACTED]` is not a valid argument value.
-
-**Do this instead:** `renderPreview` gets `sanitized.sanitizedCommand`; `runner` gets `action.command`. The test in `dispatcher/index.js` line 95 already does this correctly — preserve it.
-
-### Anti-Pattern 3: Putting Normalization Logic in selectOption
-
-**What people do:** Add retry / re-indexing logic inside `selectOption` to handle bad AI output directly.
-
-**Why it's wrong:** `selectOption` becomes responsible for two things — rendering/input and input validation. Tests for the selector now require mocking AI output. The selector stops being reusable for non-AI callers.
-
-**Do this instead:** `normalizer.js` handles all input quality concerns before entries reach `selectOption`.
-
-### Anti-Pattern 4: Using `.length` for Visual Padding
-
-**What people do:** `label.padEnd(targetWidth)` using string `.length` for padding after truncation.
-
-**Why it's wrong:** A label containing `'你好'` (2 characters, 4 visual cells) padded with `.padEnd(10)` produces 8 trailing spaces instead of 6, misaligning all following columns.
-
-**Do this instead:** Use `stringWidth(label)` to compute current visual width, then add `' '.repeat(targetWidth - stringWidth(label))` spaces.
+**Do this instead:** The bridge returns a `RecoveryPayload` to the caller. The caller (agent or workflow) decides whether to retry, prompt the user, or give up. The retry, if attempted, goes through the full `dispatchSelection` pipeline (sanitize → preview → confirm → run).
 
 ---
 
-## Integration Points
+### Anti-Pattern 2: Writing Session State Inside the Bridge
 
-### Internal Boundaries
+**What people do:** Have `stderr-bridge.js` write to `session.json` directly as a side effect of `buildPayload`.
 
-| Boundary | Communication | Constraint |
-|----------|---------------|------------|
-| `normalizer.js` → `selector/index.js` | `entries[]` array struct | IDs must be sequential 1..N integers after normalization |
-| `selector/index.js` → `dispatcher/index.js` | Single `entry` struct `{id, label, value, actionable, payload?, metadata?}` | `payload.command` is execution source of truth; `label` is display only |
-| `dispatcher/commands.js` → `sanitize.js`, `preview.js`, `index.js` | Named exports (Sets, arrays, RegExp) | Constants only — no functions, no imports in commands.js |
-| `sanitize.js` → `dispatcher/index.js` | `{status, sanitizedCommand, redactions, action, ...}` | `sanitizedCommand` for display; original `action.command` for execution |
+**Why it's wrong:** The bridge becomes stateful and has a hidden file I/O side effect. Unit tests must now mock the filesystem. The bridge's single responsibility is formatting a RecoveryPayload from a failed result.
 
-### External Boundaries (Unchanged)
+**Do this instead:** `dispatcher/index.js` calls both `stderrBridge.buildPayload()` and `sessionStore.append()` separately. Each module does one thing.
 
-| Boundary | Notes |
-|----------|-------|
-| `child_process.exec` | Runs `action.command` (original, not redacted) with `cwd` constraint |
-| `process.argv` / `process.env` | `handleHeadless` reads these; callers can inject via `opts.args` / `opts.env` |
-| `process.stdout` / `process.stderr` | Selector menu and dispatcher preview go to stdout; headless audit log goes to stderr |
+---
+
+### Anti-Pattern 3: Including Full stdout/stderr in Session Records
+
+**What people do:** Write the complete stdout and stderr from every command into `session.json` without truncation.
+
+**Why it's wrong:** A single command output (e.g., `npm install`) can produce hundreds of kilobytes. Three such records in session.json make prompt context bloated and slow. Token budget for incremental context loading is the primary constraint.
+
+**Do this instead:** Truncate `stderr` and `stdout` to a fixed limit (recommended: 2000 characters each) before writing to the session store. The `hint` field in `RecoveryPayload` is already limited to 500 characters for the same reason.
+
+---
+
+### Anti-Pattern 4: Making dispatchSelection Wait for Session Write
+
+**What people do:** `await sessionStore.append(...)` inside `dispatchSelection` before returning, blocking the caller.
+
+**Why it's wrong:** Session persistence is best-effort bookkeeping — a failed write to session.json should never fail the dispatch. The user should get their result; the session record is a bonus.
+
+**Do this instead:** Wrap the `sessionStore.append()` call in a try/catch that silently swallows errors. If the file write fails (permissions, disk full), the dispatch result is still returned normally.
+
+```javascript
+// dispatcher/index.js
+try {
+  sessionStore.append(cwd, { command: action.command, exitCode: res.code, ... });
+} catch (_) {
+  // session write failure is non-fatal
+}
+```
+
+---
+
+### Anti-Pattern 5: Session Store in a Non-CWD Location
+
+**What people do:** Write `session.json` to a fixed global path like `~/.gsd/session.json`.
+
+**Why it's wrong:** The toolkit enforces a strict CWD workspace boundary. A global session file would contain commands from multiple projects mixed together, breaking incremental context loading (which is project-scoped).
+
+**Do this instead:** Store at `{cwd}/.planning/session.json`. The `cwd` is always passed as a parameter, consistent with all other modules that write to `.planning/`.
+
+---
+
+## Suggested Build Order
+
+Dependencies between the four v1.2 features determine the correct sequence:
+
+```
+1. session/store.js                    [no internal deps — start here]
+       └── session/__tests__/store.test.js
+
+2. dispatcher/stderr-bridge.js         [no deps — parallel with step 1]
+       └── dispatcher/__tests__/stderr-bridge.test.js
+
+3. dispatcher/index.js                 [depends on steps 1 and 2]
+       • import stderr-bridge.js
+       • import session/store.js
+       • structured return: add recovery + preview fields
+       • dry-run returns DryRunResult
+       • session append wrapped in try/catch
+       └── dispatcher/__tests__/dispatcher.test.js   [update existing tests]
+
+4. dispatcher/preview.js               [if DryRunResult needs preview.js changes]
+       • optional: expose sanitize status in dry-run output
+       └── dispatcher/__tests__/  [update if modified]
+```
+
+**Rationale:**
+- Steps 1 and 2 have zero internal dependencies and can be built in parallel.
+- Step 3 (`dispatcher/index.js`) is the integration point — it requires both the bridge and the store to be stable before modification.
+- Step 4 is optional and deferred: the current dry-run path in `dispatcher/index.js` can return a structured result without changes to `preview.js`, since `sanitizeAction()` already returns `sanitized.status` and `sanitized.sanitizedCommand`.
+
+**Test count expectation:**
+- `session/store.test.js`: ~10 tests (append, read, clear, truncation, ring-buffer trim, missing file, write failure)
+- `stderr-bridge.test.js`: ~8 tests (non-zero exit, zero exit returns null, stderr truncation, stdout capture, null stderr handling)
+- `dispatcher.test.js` additions: ~6 new tests (structured return on success, structured return on failure, recovery field present/absent, dry-run preview struct, session record written)
+
+Total expected new tests: ~24. Combined with existing 126, target is ~150 tests at v1.2 completion.
+
+---
+
+## Scaling Considerations
+
+This is a local CLI toolkit — scaling to N users is not a concern. The relevant "scale" question is token budget for incremental context.
+
+| Concern | Conservative Limit | Rationale |
+|---------|-------------------|-----------|
+| Session entries (ring buffer) | 3 | Enough for "last error, last success, prior state" without exceeding 2K tokens in context |
+| stderr truncation per entry | 2000 chars | First 2K captures the error message; build output beyond this adds noise |
+| stdout truncation per entry | 2000 chars | Most commands produce short output; build logs are captured elsewhere |
+| session.json total file size | ~15KB max | 3 × (2K stderr + 2K stdout + metadata) stays well under any file I/O concerns |
+
+---
 
 ## Sources
 
-- Codebase direct inspection: `get-shit-done/bin/lib/selector/` and `get-shit-done/bin/lib/dispatcher/` (2026-02-24)
-- Phase context documents: `08-CONTEXT.md`, `09-CONTEXT.md`, phase summaries 08-01, 08-02, 09-01, 09-02
-- Phase 7 context: schema/selector contract decisions (`7-CONTEXT.md`)
-- `.planning/PROJECT.md` v1.1 requirements
-- `.planning/codebase/ARCHITECTURE.md`, `CONCERNS.md`
-- Confidence: HIGH — all claims based on direct code inspection of the current implementation
+- Direct code inspection: `get-shit-done/bin/lib/dispatcher/index.js` — confirmed `dryRun` flag, `runner` return shape, current return struct (2026-02-24)
+- Direct code inspection: `get-shit-done/bin/lib/dispatcher/sanitize.js` — confirmed `{status, sanitizedCommand, replacements}` return shape (2026-02-24)
+- Direct code inspection: `get-shit-done/bin/lib/dispatcher/preview.js` — confirmed no dry-run structured output currently (2026-02-24)
+- `.planning/PROJECT.md` — v1.2 feature list and constraints (zero external dependencies, CWD boundary, no major rewrites)
+- `.planning/codebase/ARCHITECTURE.md` — file-based state, `.planning/` as workspace memory directory convention
+- Prior `.planning/research/ARCHITECTURE.md` (v1.1) — component boundaries, data flow, anti-patterns still valid
 
 ---
-*Architecture research for: v1.1 CLI selection and security enhancements*
+
+*Architecture research for: v1.2 agent-to-local feedback loop integration*
 *Researched: 2026-02-24*

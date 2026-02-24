@@ -1,6 +1,6 @@
 # Feature Research
 
-**Domain:** CLI selection standardization and secure dispatch — v1.1 additions to Codex toolkit
+**Domain:** Agent-to-local feedback loop — STDERR recovery, incremental context loading, session persistence, dry-run validation
 **Researched:** 2026-02-24
 **Confidence:** HIGH
 
@@ -8,7 +8,19 @@
 
 ## Scope Note
 
-This file covers **only the v1.1 additions**. The v1.0 baseline (numbered list rendering, InputSelector, basic secret redaction, headless preselection, width-aware truncation) is already shipped and not reassessed here. Each feature below is assessed against what the existing modules already do.
+This file covers **only the v1.2 additions**. The v1.0 baseline (numbered list rendering,
+InputSelector, headless preselection, safe dispatch, secret redaction) and v1.1 additions
+(shared constants, auto-reindexing normalizer, provider-specific secret patterns) are already
+shipped and not reassessed here. Each feature below is assessed against what the existing
+dispatcher and selector modules already provide.
+
+**Existing integration points used by all four features:**
+
+- `dispatchSelection()` in `dispatcher/index.js` — runner, dryRun, output/input injection
+- `defaultRunner()` — wraps `child_process.exec`, already captures `{code, stdout, stderr}`
+- `sanitizeAction()` in `dispatcher/sanitize.js` — CWD boundary enforcement, secret redaction
+- `renderPreview()` in `dispatcher/preview.js` — outputs sanitized command before execution
+- `normalizeOptions()` + `run()` in `selector/index.js` — raw AI text → numbered entries
 
 ---
 
@@ -16,109 +28,125 @@ This file covers **only the v1.1 additions**. The v1.0 baseline (numbered list r
 
 ### Table Stakes (Users Expect These)
 
-Features that users of any mature CLI selection system assume are present. Missing these makes the tool feel brittle or unfinished when the list changes dynamically or when credentials appear in commands.
+Features that users of any mature CLI agent toolkit assume exist. Missing these makes the
+agent loop feel fragile: errors disappear silently, context is never fed back, and there is
+no safety valve before destructive commands run.
 
-| Feature | Why Expected | Complexity | v1.0 Gap | Notes |
-|---------|--------------|------------|----------|-------|
-| Auto-reindex on list mutation | Any tool that lets items be removed must keep numbers contiguous — gaps like "1, 3, 5" cause user confusion and parse errors | LOW | v1.0 uses caller-supplied `id` fields; no reindex on removal | Normalize at entry point: reassign `id` sequentially (1…N) before render, ignoring whatever the source assigned. Pure mapping step. |
-| Expanded secret detection (provider-specific patterns) | The current `*_API_KEY`, `*_TOKEN`, `*_SECRET` regex misses bearer tokens, GitHub PATs (`ghp_`), AWS keys (`AKIA`), Stripe keys (`sk_live_`), connection strings with embedded credentials | MEDIUM | `redactSecrets()` only covers the generic `NAME=VALUE` assignment form | Add patterns ordered specific → generic. Specific patterns (e.g. `ghp_[a-zA-Z0-9]{36}`) before the generic fallback so prefix-based detection fires first. |
-| Destructive command highlighting in preview | Users expect visual differentiation between safe reads and destructive writes. Red/bold on `rm`, `drop`, `--force` is the industry standard (git, docker, npm all warn before destructive ops) | LOW | Already in `preview.js` via `highlightDestructive()` and `DESTRUCTIVE_TERMS`; terms list is minimal | Extend `DESTRUCTIVE_TERMS` to cover `delete`, `destroy`, `wipe`, `nuke`, `-rf`, `--hard` (git reset), `purge`, `unlink` — all verbs common in AI-generated shell commands |
-| Confirmation for destructive commands | Standard pattern across all mature CLIs (docker container prune, git rebase, npm unpublish): show `Proceed? (y/N)` with default No before any mutating action | LOW | `dispatchSelection()` gates on `mutating` flag; detection regex is narrow | Widen the `mutating` regex to include the additional destructive verbs above so confirmation triggers reliably |
-| `--select` flag and `GS_DONE_SELECT` env for CI/scripting | CI pipelines need to preselect without TTY. The POSIX convention of flag > env var is universally followed (npm, git, docker all support env overrides with flag taking precedence) | LOW | Already in `headless.js`; both flag forms (`--select N` and `--select=N`) supported | No gap; table stake is met. Document this clearly for downstream users. |
-| Unicode-aware column alignment | Any tool that outputs tabular data must measure display width in cells, not bytes. CJK characters are 2 cells; emoji may be 2; plain ASCII is 1. Misalignment on CJK content breaks the visual contract | LOW | `format.js` has an inline implementation covering common CJK ranges | The inline ranges miss some Emoji modifiers and newer Unicode blocks. Using `string-width` v4.x (last CJS-compatible major) is the standard ecosystem answer. **However**: `string-width` v5+ is ESM-only; the project is CJS. Use v4.2.3 (last CJS release) or inline a verified equivalent. |
+| Feature | Why Expected | Complexity | Existing Gap | Notes |
+|---------|--------------|------------|--------------|-------|
+| STDERR surfacing after dispatch | Every CLI tool that runs subprocesses surfaces errors — curl, git, npm all print failure output. Swallowing STDERR from an agent-dispatched command and returning `{ran: true}` is surprising behavior. | LOW | `defaultRunner()` captures `stderr` in result but `dispatchSelection()` does not surface or act on non-empty STDERR after a successful exit (code 0). | Print STDERR to `output` when non-empty after execution. This alone closes the most visible gap. |
+| Exit-code differentiated error reporting | Users expect `code !== 0` to be visually distinct from `code === 0`. git, make, and npm all print `Process exited with code N` for non-zero exits. | LOW | `dispatchSelection()` returns `{ran:true, result:{code,stdout,stderr}}` but does not render any failure indicator to the terminal. | Emit a formatted failure line (including exit code) when `result.code !== 0`. Reuse `output` stream consistent with existing `renderPreview()`. |
+| "What would run" preview before execution | The `--dry-run` convention is universal: kubectl, git, rsync, ansible, Terraform all support it. An agent toolkit without it cannot be used safely in onboarding or review workflows. | LOW | `dryRun` flag already exists in `dispatchSelection()`. It prints `Skip execute: <cmd>` and returns `{dryRun:true}`. The flag exists but the output is minimal and there is no structured result for programmatic callers. | Extend the dry-run return value to include the sanitized command, estimated impact, and redaction metadata so callers can render a richer preview or pipe to test assertions. |
+| Session action log (last N actions) | CI/agent tools like the OpenClaw agent, Claude Code, and Continue all maintain session state. Developers expect to answer "what did this agent just do?" without reading raw logs. | MEDIUM | No session state exists. Each `dispatchSelection()` call is stateless. | Append-only JSONL file in `.codex-session/` (or configurable path). Each entry: timestamp, command (sanitized), exit code, stderr snippet (truncated). Cap at N=3 entries retained in memory; flush to disk. |
+| Context injection into next agent prompt | Any agentic loop (Pydantic-AI coding agent, GitHub Copilot agent) feeds command output back into the model before the next generation step. Without this, the agent is blind to what just happened. | MEDIUM | The selector and dispatcher are decoupled. There is no mechanism to attach `stdout`/`stderr` from the previous dispatch to the next `run()` call. | Define a context object `{stdout, stderr, exitCode, command}` returned from `dispatchSelection()` that callers can pass as `context` to the next `normalizeOptions()` / agent prompt. The selector itself need not change — this is a calling-convention contract. |
 
 ### Differentiators (Competitive Advantage)
 
-Features that set this dispatch layer apart from naive script-level execution or basic `inquirer` flows.
+Features that go beyond baseline expectations and make the feedback loop qualitatively better
+than a raw `exec` wrapper with a menu in front of it.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Provider-specific secret patterns (ordered specific → generic) | Catches real-world credentials that generic `*_KEY=value` misses: GitHub PATs, Stripe keys, AWS access keys, PEM private keys, connection-string passwords | MEDIUM | Seven pattern tiers recommended (see Pattern Tiers section below). This is the same approach used by Semgrep, Gitleaks, and the `detect-secrets` library. |
-| Destructive-verb extensibility (configurable term list) | Allows callers to add domain-specific destructive verbs (e.g., `migrate`, `rollback`) without patching core | LOW | Export `DESTRUCTIVE_TERMS` as a set that `highlightDestructive()` reads at call-time; callers can extend or replace it |
-| Audit trail for headless selections to stderr | CI-friendly: produces parseable `[Headless] Selected: N (Label)` on stderr while stdout stays clean for the action result. Follows the same stdout/stderr separation convention as git, docker, and make | LOW | Already implemented in `headless.js` |
-| NO_COLOR / `--no-color` respected throughout | Matches the `NO_COLOR.org` standard. Strip ANSI before rendering menu, after measuring widths, not before. Prevents alignment corruption when running under logging systems that strip ANSI at output | LOW | Already in `headless.js`; needs verification it propagates to interactive path in `index.js` |
+| STDERR recovery bridge with fix-suggestion prompt | After a non-zero exit, present the STDERR output and ask the user (or agent) whether to retry, edit the command, or abort. This is the pattern used by Warp AI and the Spotify background coding agent. Closing the loop from failure → actionable suggestion is the v1.2 headline feature. | MEDIUM | Requires: (1) detecting non-zero exit, (2) formatting STDERR with context, (3) prompting "Retry / Edit / Abort". The `editCommand()` function already exists in `dispatcher/edit.js` and handles interactive command editing. Re-use it for the "Edit" path of the recovery bridge. No new editing infrastructure needed. |
+| Incremental context loading: stdout/stderr fed to next selection | Enables genuine multi-turn agent loops: run command → feed output → generate next set of options → select → run. This is what GitHub Copilot CLI's "Task" agent does. Without it, the agent is a one-shot selector, not a loop. | MEDIUM | The context object (see table stakes) enables this. The differentiating step is defining a standard envelope so any prompt template can read `{{context.stdout}}` and `{{context.stderr}}` in the next invocation. Keep the envelope small: cap stdout/stderr at ~2KB to stay within typical prompt context budgets. |
+| Session persistence with redacted command history | Persisting the last 3 actions (sanitized, no secrets) gives the agent memory of what it did this session without requiring an external store. Deep Agents CLI and OpenClaw both use JSONL for this reason: append-only, crash-safe, human-readable, greppable. | MEDIUM | JSONL is the correct format. File location: `.codex-session/history.jsonl` relative to CWD (inside workspace boundary). Each record: `{ts, command, exitCode, stderrSnippet, agentId}`. Max file size: 50KB before rotation (prevents unbounded growth in long sessions). Secret redaction is mandatory before write — reuse `redactSecrets()` from `sanitize.js`. |
+| Structured dry-run result for test assertions | Current dry-run returns `{ran:false, dryRun:true}`. Returning `{ran:false, dryRun:true, sanitizedCommand, redactions, estimatedMutating}` lets integration tests assert on what would have run without executing it. This is the same structured result pattern that Ansible's check mode and Terraform's plan step provide. | LOW | Purely additive: enrich the existing dry-run return path in `dispatchSelection()`. Zero behaviour change for existing callers that ignore the extra fields. |
+| Agent dry-run validation: dispatcher simulation without runner | Allow callers to call `dispatchSelection()` with `dryRun:true` and a mock `runner` to fully simulate the dispatch pipeline (sanitize → preview → mutating-gate → result) without touching the filesystem. This makes the dispatcher testable end-to-end in CI without side effects. | LOW | The `runner` injection point already exists in `dispatchSelection(opts.runner)`. Document the pattern explicitly; no code changes may be needed beyond the enriched dry-run result above. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Fuzzy/substring match for preselection (e.g., `--select "auth"`) | "Type less in CI scripts" | Makes preselection non-deterministic when labels change; breaks automated pipelines silently | Keep numeric-only `--select`. Use a stable label → number mapping in calling scripts if needed. |
-| Entropy-based secret detection | "Catch unknown credential formats" | High false-positive rate on base64 file content, hashes, and encoded values that look like secrets; would redact non-secret data in command previews | Stick to pattern-based detection ordered from specific to generic. Entropy is appropriate for offline scanning tools (gitleaks), not in-process preview redaction. |
-| Per-provider secret type taxonomy in output | "Show which provider the secret belongs to" | Leaks information about what credentials are present — the opposite of the security goal | Replace uniformly with `[REDACTED]`; do not annotate with provider name |
-| Storing redaction logs persistently | "Audit what was redacted" | Logs containing `key=ORIGINAL_VALUE` are themselves a secret leak vector | Redaction is display-only: redact for preview, pass original to executor. No log of original values. |
-| Interactive TUI arrow-key navigation | "Feels more modern" | Fails in headless/SSH sessions; adds a dependency with no headless path | Numbered list is always headless-compatible; keep that contract |
+| Auto-retry on STDERR without human confirmation | "The agent should fix itself" | Silent retries can amplify damage — a command that fails with a permission error might succeed after `sudo`, which is a privilege escalation the user never approved. | Present the STDERR and prompt the user (Retry / Edit / Abort). Never retry automatically. |
+| Full stdout captured to session file | "I want the complete output history" | Stdout from builds or test runs can be megabytes. Writing all of it to a session file causes unbounded disk growth and leaks build artifacts (which may contain secrets). | Cap STDERR snippet at 500 chars. Store exit code and command. If full output is needed, redirect the command with `>> logfile` explicitly. |
+| Streaming stdout back to the agent in real-time | "The agent should see output as it arrives" | `child_process.exec` buffers stdout; switching to `spawn` with streaming changes the entire runner contract and breaks the existing 88 dispatcher tests. | Use `exec` (existing), capture stdout after completion, pass to context object. For long-running processes, caller can use `spawn` with a custom `runner` injection. |
+| Persistent session across CWD changes | "Remember what I did in other projects" | Cross-project memory conflates unrelated command histories and makes session replay ambiguous (a command like `npm run build` means different things in different repos). | Session file is always relative to CWD. Each project gets its own `.codex-session/history.jsonl`. |
+| Entropy-based STDERR anomaly detection | "Flag unusual patterns in stderr automatically" | High false-positive rate. Base64 content, stack traces, and test output all look "high entropy". This would flag legitimate build errors as secrets. | Pattern-based `redactSecrets()` before writing to session file. No entropy analysis. |
+| Storing original (unredacted) commands in session | "I need to replay commands exactly" | The session file is persisted to disk inside the workspace. If it contains raw credentials, any tool that reads the workspace (linters, git, CI) may expose them. | Store only the sanitized command. The caller is responsible for re-supplying secrets at replay time. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-InputSelector (v1.0)
-    └──requires──> Auto-reindex normalizer (v1.1)
-                       (ensures 1..N before render)
+STDERR Recovery Bridge
+    └──requires──> defaultRunner() captures {code, stdout, stderr}  [already true]
+    └──requires──> dispatchSelection() checks result.code after runner()  [new]
+    └──reuses──> editCommand() from dispatcher/edit.js for Edit path  [already exists]
+    └──enhances──> Session Persistence (failed commands logged with stderr snippet)
 
-redactSecrets() (v1.0 generic)
-    └──extended by──> Provider-specific patterns (v1.1)
-                          (ordered specific → generic, same function signature)
+Incremental Context Loading
+    └──requires──> dispatchSelection() returns context object  [new return fields]
+    └──feeds──> normalizeOptions() / run() on next invocation  [caller responsibility]
+    └──enhances──> STDERR Recovery Bridge (stderr is part of context envelope)
 
-DESTRUCTIVE_TERMS (v1.0 set)
-    └──extended by──> Additional destructive verbs (v1.1)
-                          └──improves──> mutating detection in dispatchSelection()
-                                             └──gates──> Confirmation prompt
+Session Persistence
+    └──requires──> redactSecrets() from dispatcher/sanitize.js  [already exists]
+    └──requires──> dispatchSelection() result includes command + exit code  [already true]
+    └──requires──> File write inside CWD boundary  [must use isInsideWorkspace() check]
+    └──enhanced by──> STDERR Recovery Bridge (failed dispatch events recorded)
 
-handleHeadless() (v1.0)
-    ──already provides──> --select flag + GS_DONE_SELECT env (no v1.1 work needed)
-
-format.js stringWidth() (v1.0 inline)
-    └──verify or replace──> string-width v4.2.3 (CJS) (v1.1 decision)
+Agent Dry-Run Validation
+    └──requires──> dispatchSelection() dryRun path  [already exists]
+    └──requires──> sanitizeAction() result available at dry-run return point  [already true]
+    └──enhances──> Session Persistence (dry-run runs are NOT written to session log)
+    └──uses──> runner injection point  [already exists]
 ```
 
 ### Dependency Notes
 
-- **Auto-reindex requires InputSelector input contract:** The reindexer must run before `selectOption()` is called so `id` fields are 1..N. It is a pure pre-render step, not an internal selector change.
-- **Provider-specific patterns extend, not replace, existing `redactSecrets()`:** The function signature stays the same (`str → {redacted, replacements}`); the pattern list grows. No caller changes needed.
-- **Extended DESTRUCTIVE_TERMS improves mutating detection:** The `mutating` flag detection in `dispatchSelection()` currently uses a hardcoded regex. Extending `DESTRUCTIVE_TERMS` and wiring it to the `mutating` check unifies the two currently-separate term lists.
-- **string-width v4.x is the CJS-safe choice:** v5+ is ESM-only. The project cannot `require()` v5+. Using v4.2.3 or keeping the inline implementation (which already covers common ranges) are the two options. The inline implementation is adequate for the project's use case; adding a dependency is optional.
+- **STDERR Recovery Bridge reuses `editCommand()`:** The existing `edit.js` module handles
+  interactive command editing with the same `ask`/`input`/`output` injection pattern as the
+  rest of the dispatcher. No new editing infrastructure is needed for the recovery bridge.
+
+- **Incremental context loading is a return-value contract, not a new module:** The selector
+  and dispatcher do not need to know about each other. The context envelope (`{stdout, stderr,
+  exitCode, command}`) is returned by `dispatchSelection()` and passed by the caller into the
+  next `run()` call or prompt template. This keeps the modules decoupled.
+
+- **Session persistence must enforce CWD boundary:** The file `.codex-session/history.jsonl`
+  must be resolved with `path.resolve(cwd, '.codex-session/history.jsonl')` and validated
+  with `isInsideWorkspace()` before writing. This is non-negotiable given the project's
+  workspace-boundary security model.
+
+- **Dry-run enrichment is purely additive:** Existing callers that destructure only
+  `{ran, dryRun}` are unaffected by adding `sanitizedCommand`, `redactions`, and
+  `estimatedMutating` to the dry-run return object.
+
+- **Build order within v1.2:** Session Persistence depends on `redactSecrets()` (available
+  now) and `dispatchSelection()` result shape (stable). STDERR Recovery Bridge depends on
+  the dispatcher result. Dry-Run Validation depends on the same result enrichment. Recommended
+  build order: (1) enrich dispatchSelection() return, (2) STDERR recovery bridge, (3) session
+  persistence, (4) incremental context loading contract, (5) dry-run validation documentation.
 
 ---
 
-## Pattern Tiers: Expanded Secret Detection
-
-Secret detection patterns must be ordered specific → generic. If a generic `KEY=value` pattern fires first, provider-specific replacement text cannot be formatted correctly.
-
-| Tier | Pattern Category | Example Regex | Replace With |
-|------|-----------------|---------------|--------------|
-| 1 | OpenAI keys | `sk-proj-[a-zA-Z0-9\-_]{20,}` or `sk-[a-zA-Z0-9]{20,}` | `[REDACTED-OPENAI]` |
-| 2 | GitHub PATs | `ghp_[a-zA-Z0-9]{36}` or `github_pat_[A-Za-z0-9]{22}_[A-Za-z0-9]{59}` | `[REDACTED-GH-TOKEN]` |
-| 3 | AWS access keys | `AKIA[0-9A-Z]{16}` | `[REDACTED-AWS-KEY]` |
-| 4 | Stripe secrets | `sk_live_[a-zA-Z0-9]{24,}` or `rk_live_[a-zA-Z0-9]{24,}` | `[REDACTED-STRIPE]` |
-| 5 | PEM private keys | `-----BEGIN[^-]*PRIVATE KEY-----[\s\S]*?-----END[^-]*PRIVATE KEY-----` | `[REDACTED-PRIVATE-KEY]` |
-| 6 | Connection strings | `(postgres(?:ql)?|mongodb)://[^:]+:[^@]+@` (keep scheme, redact user:pass) | `$scheme://[REDACTED]@` |
-| 7 | Generic fallback (existing) | `\b([A-Z0-9_]*(API_KEY\|TOKEN\|SECRET\|PASSWORD\|PASSWD\|PWD\|PASS\|AUTH\|CREDENTIAL)[A-Z0-9_]*)=([^\s]+)` | `$name=[REDACTED]` |
-
-**Confidence:** MEDIUM (patterns sourced from Semgrep blog, trevo.rs agent-redaction article, and Gitleaks documentation; exact regexes should be tested against real credential samples before shipping).
-
----
-
-## MVP Definition for v1.1
+## MVP Definition for v1.2
 
 ### Launch With (this milestone)
 
-- [x] Auto-reindex: normalize `id` fields to 1..N before any render call — preserves existing `selectOption()` contract
-- [x] Expanded secret patterns: add tiers 1–6 above as prefix rules ahead of existing generic pattern
-- [x] Extended destructive verbs: add `delete`, `destroy`, `-rf`, `--hard`, `purge`, `wipe`, `unlink` to `DESTRUCTIVE_TERMS`
-- [x] Widen `mutating` detection in `dispatchSelection()` to use the same term set
+- [ ] **STDERR surface on non-zero exit** — print stderr content + exit code to `output` stream
+      after dispatch; no silently-swallowed failures
+- [ ] **STDERR recovery bridge** — on non-zero exit: prompt Retry / Edit (reuse `editCommand()`)
+      / Abort; resolved selection feeds back into dispatcher
+- [ ] **Enriched dry-run result** — add `sanitizedCommand`, `redactions`, `estimatedMutating`
+      to the `{ran:false, dryRun:true}` return object
+- [ ] **Session persistence (last 3)** — append-only JSONL at `.codex-session/history.jsonl`;
+      write sanitized command, exit code, stderr snippet, timestamp, agentId; cap at 3 in-memory,
+      rotate file at 50KB
+- [ ] **Context envelope return** — `dispatchSelection()` returns `context:{stdout,stderr,
+      exitCode,command}` (capped at 2KB each) alongside existing result fields
 
-### Already Shipped (no v1.1 work needed)
+### Defer to v1.3+
 
-- [x] `--select` flag and `GS_DONE_SELECT` env preselection (headless.js is complete)
-- [x] Unicode-aware column alignment (inline implementation covers common ranges; verify emoji modifier coverage is acceptable for project scope)
-
-### Defer to v1.2+
-
-- [ ] Configurable destructive-verb injection API (let callers extend DESTRUCTIVE_TERMS at runtime) — wait until a real consumer need arises
-- [ ] `string-width` v4.x as explicit dependency — inline implementation is sufficient; evaluate only if alignment bugs surface with real content
-- [ ] Coverage of ambiguous-width Unicode characters (East Asian Ambiguous category) — narrow-only treatment is correct default; defer until user complaint
+- [ ] **Automatic context injection into prompt templates** — standardize
+      `{{context.stdout}}` / `{{context.stderr}}` variables in Markdown prompt files;
+      wait until at least one real consumer prompt needs it
+- [ ] **Session replay** — read `.codex-session/history.jsonl` and re-present last N actions
+      as numbered options; depends on real user demand
+- [ ] **Multi-turn agent loop orchestrator** — a higher-level `runLoop()` that wires
+      select → dispatch → context → select automatically; defer until the context
+      envelope pattern stabilises across a few real callers
 
 ---
 
@@ -126,38 +154,45 @@ Secret detection patterns must be ordered specific → generic. If a generic `KE
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Expanded secret patterns (tiers 1–6) | HIGH — prevents real credential leakage in screen shares and CI logs | MEDIUM — 6 new regexes in `redactSecrets()` | P1 |
-| Extended destructive verbs | HIGH — prevents silent destructive dispatch for AI-generated commands | LOW — extend constant, update mutating regex | P1 |
-| Auto-reindex on list mutation | MEDIUM — required for any dynamic list but lists are currently static | LOW — pure mapping before render | P1 |
-| Unicode column alignment (verification) | MEDIUM — correctness for non-ASCII labels | LOW — verify inline impl covers emoji range | P2 |
-| `--select` / env preselection | HIGH — already shipped | ZERO | Done |
+| STDERR surface (non-zero exit) | HIGH — eliminates silent failures | LOW — 5-line change in dispatchSelection() | P1 |
+| STDERR recovery bridge | HIGH — closes the agent feedback loop | MEDIUM — new recovery prompt + Retry/Edit/Abort flow | P1 |
+| Enriched dry-run result | HIGH — enables test assertions on dispatch pipeline | LOW — additive fields on existing return object | P1 |
+| Session persistence (JSONL) | MEDIUM — workspace memory for multi-turn loops | MEDIUM — file I/O, redaction, rotation logic | P1 |
+| Context envelope return | MEDIUM — enables incremental context loading | LOW — additive fields on dispatchSelection() return | P2 |
+| Automatic prompt template injection | LOW — nice to have, no current consumer | MEDIUM | P3 |
+| Session replay as numbered menu | LOW — convenience feature | MEDIUM | P3 |
+
+**Priority key:** P1 = ship in v1.2, P2 = ship in v1.2 if straightforward, P3 = defer
 
 ---
 
-## Competitor Reference Patterns
+## Comparable Tool Patterns
 
-| Behavior | Docker CLI | Git | npm CLI | Codex v1.0 | Codex v1.1 target |
-|----------|------------|-----|---------|------------|-------------------|
-| Destructive confirmation | `Are you sure? [y/N]` | none (exits non-zero with error) | `Are you sure?` for unpublish | `Proceed? (y/N)` | Same, but wider trigger |
-| Secret masking in output | Not built-in | Not built-in | Not built-in | `NAME=[REDACTED]` for generic patterns | + provider-specific tiers |
-| Numbered selection | Not present | Not present | Not present | 1–N numbered list | Auto-reindexed when items removed |
-| Env var preselection | `DOCKER_HOST` etc. | `GIT_*` env vars | `NPM_CONFIG_*` | `GS_DONE_SELECT` | No change |
-| Unicode alignment | Not a concern | Not a concern | Not a concern | Inline CJK width | Verify emoji modifier range |
+| Behavior | Warp AI terminal | GitHub Copilot agent (CLI) | Spotify coding agent | Codex v1.2 target |
+|----------|-----------------|---------------------------|----------------------|-------------------|
+| STDERR on failure | Surfaces inline with suggestion | Shows in terminal output | Logged to session | Print to `output` stream with exit code |
+| Error recovery prompt | AI suggests fix automatically | Manual re-prompt | Human-in-the-loop retry | Retry / Edit (editCommand) / Abort |
+| Session memory | Per-session AI context | Conversation thread | JSONL per session | `.codex-session/history.jsonl`, last 3 |
+| Context fed to next step | Automatic (agent manages) | Tool call result → model context | Full loop | Context envelope returned from dispatchSelection() |
+| Dry-run / preview | Not applicable | `--dry-run` on some commands | Plan step | Enriched dryRun return with sanitizedCommand |
+| Secret redaction before log | Not built-in | Not built-in | Not built-in | redactSecrets() before JSONL write |
 
 ---
 
 ## Sources
 
-- [secrets-patterns-db — largest open-source regex database for secret detection](https://github.com/mazen160/secrets-patterns-db)
-- [Semgrep: Secrets Story — prefixed secrets detection ordering](https://semgrep.dev/blog/2025/secrets-story-and-prefixed-secrets/)
-- [Trevor Stenson: Keeping Secrets Out of Your Agent's Context](https://trevo.rs/agent-redaction) — ordered pattern tiers for agent redaction
-- [Gitleaks — 160+ secret type patterns](https://gitleaks.io/)
-- [GitHub Secret Scanning Updates — November 2025](https://github.blog/changelog/2025-12-02-secret-scanning-updates-november-2025/) — 24 new secret types added
-- [string-width npm — ESM-only since v5](https://www.npmjs.com/package/string-width) — confirms v4.x is last CJS-compatible release
-- [lirantal/nodejs-cli-apps-best-practices](https://github.com/lirantal/nodejs-cli-apps-best-practices) — env var detection and destructive confirmation conventions
-- [Docker CLI issue #2745 — y/N confirmation pattern](https://github.com/docker/cli/issues/2745) — confirmation UX reference
+- [Coding Agent CI Feedback Loop — agentic-patterns.com](https://agentic-patterns.com/patterns/coding-agent-ci-feedback-loop/)
+- [Background Coding Agents: Feedback Loops — Spotify Engineering, Dec 2025](https://engineering.atspotify.com/2025/12/feedback-loops-background-coding-agents-part-3)
+- [Warp embeds AI agents into CLI — DevOps.com](https://devops.com/warp-embeds-ai-agents-into-a-cli-to-provide-better-feedback-loop/)
+- [Building your own CLI Coding Agent with Pydantic-AI — martinfowler.com](https://martinfowler.com/articles/build-own-coding-agent.html)
+- [GitHub Copilot CLI: Enhanced agents, context management — GitHub Changelog, Jan 2026](https://github.blog/changelog/2026-01-14-github-copilot-cli-enhanced-agents-context-management-and-new-ways-to-install/)
+- [In praise of --dry-run — Hacker News](https://news.ycombinator.com/item?id=27263136)
+- [CLI Tools that support previews, dry runs — nickjanetakis.com](https://nickjanetakis.com/blog/cli-tools-that-support-previews-dry-runs-or-non-destructive-actions)
+- [Node.js child_process documentation — official](https://nodejs.org/api/child_process.html)
+- [OpenClaw agent session JSONL pattern — custom agent framework article](https://nader.substack.com/p/how-to-build-a-custom-agent-framework)
+- [Error Recovery and Fallback Strategies in AI Agent Development — gocodeo.com](https://www.gocodeo.com/post/error-recovery-and-fallback-strategies-in-ai-agent-development)
 
 ---
 
-*Feature research for: Codex CLI selection standardization and security — v1.1 milestone*
+*Feature research for: Codex CLI agent-to-local feedback loop — v1.2 milestone*
 *Researched: 2026-02-24*
