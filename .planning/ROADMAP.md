@@ -71,7 +71,7 @@ Plans:
 | 7. Schema & Selector | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 8. Safe Dispatch | v1.0 | 2/2 | Complete | 2026-02-24 |
 | 9. UX Polish & Headless | v1.0 | 2/2 | Complete | 2026-02-24 |
-| 10. Shared Command Policy Foundation | v1.1 | Complete    | 2026-02-24 | - |
+| 10. Shared Command Policy Foundation | 2/2 | Complete   | 2026-02-24 | - |
 | 11. Secure Dispatcher | v1.1 | 0/? | Not started | - |
 | 12. Selection Normalization | v1.1 | 0/? | Not started | - |
 
