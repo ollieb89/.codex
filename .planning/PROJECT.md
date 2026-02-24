@@ -8,6 +8,16 @@ A focused effort to optimize the Codex local toolkit (prompts, agents, skills, w
 
 Codex runs lean and predictable: the right agent/prompt triggers the right behavior with minimal friction.
 
+## Current Milestone: v1.0 Numbered CLI Selection UX
+
+**Goal:** Standardize numbered option output and selection handling so Codex CLIs can drive actions reliably without manual parsing.
+
+**Target features:**
+- Standardized AI output schema for numbered lists (1–N, no filler)
+- Generic InputSelector helper to render lists and return selected item
+- Input validation with 0-to-exit and non-numeric error handling
+- Codex-style execution flow that triggers the associated action on selection
+
 ## Requirements
 
 ### Validated
@@ -16,11 +26,10 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 
 ### Active
 
-- [ ] Prompts and command TOML are normalized, validated, and documented
-- [ ] Agent guides and modes are coherent, deduplicated, and aligned with defaults
-- [ ] Skills (web-artifacts-builder, frontend-design, skill-creator) are audited and tuned for reproducibility
-- [ ] Workflows generate reliable planning artifacts (config/state/roadmap) without manual patching
-- [ ] Git and config defaults support safe, repeatable runs
+- [ ] Standardize AI numbered-list responses across Codex prompts/agents
+- [ ] Provide a reusable InputSelector helper for CLI-driven selection
+- [ ] Add input validation with 0-to-exit convention for CLI flows
+- [ ] Link selections to Codex actions (execute command/apply diff) without manual parsing
 
 ### Out of Scope
 
@@ -47,4 +56,4 @@ Codex runs lean and predictable: the right agent/prompt triggers the right behav
 | Prioritize internal optimizations over new features | Focus effort on reliability and clarity of existing toolkit | — Pending |
 
 ---
-*Last updated: 2026-02-24 after initialization*
+*Last updated: 2026-02-24 after starting milestone v1.0 Numbered CLI Selection UX*

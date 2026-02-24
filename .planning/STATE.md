@@ -4,16 +4,18 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Codex runs lean and predictable: the right agent/prompt triggers the right behavior with minimal friction.
-**Current focus:** Phase 1 — Align Guidance
+**Current milestone:** v1.0 Numbered CLI Selection UX
+
+## Current Position
+- Phase: Not started (defining requirements)
+- Plan: —
+- Status: Defining requirements
+- Last activity: 2026-02-24 — Milestone v1.0 started
 
 ## Progress
-- Phases total: 6
-- Current phase: 1
-- Requirements total: 12
-
-## Requirements Status
-- v1: Pending (mapped to phases)
-- v2: Deferred (ENH-01, ENH-02)
+- Phases total: — (pending new roadmap)
+- Current phase: — (pending)
+- Requirements total: — (pending)
 
 ## Decisions
 - Auto mode, standard depth, balanced models, parallel execution
