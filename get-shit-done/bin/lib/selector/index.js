@@ -1,4 +1,7 @@
 const readline = require('node:readline');
+const { formatMenuItem } = require('./format');
+const { handleHeadless } = require('./headless');
+const { normalizeOptions, NormalizationError } = require('./normalize');
 
 /**
  * Render entries and read numeric selection.
@@ -7,6 +10,25 @@ const readline = require('node:readline');
  * @returns {Promise<{id:number,label:string,value:string,actionable:boolean,payload?:object|null,metadata?:object|null}>}
  */
 async function selectOption(entries, opts = {}) {
+  const args = opts.args || process.argv;
+  const env = opts.env || process.env;
+
+  // Headless check
+  const headless = handleHeadless(entries, args, env, { stderr: opts.output || process.stderr });
+  if (headless.exitCode !== -1) {
+    if (headless.exitCode === 0) {
+      return headless.result;
+    }
+    // For invalid/out-of-range selection in headless mode, we exit non-zero
+    // but in tests we might want to just return or throw.
+    if (opts.noExit) {
+      const err = new Error('Headless selection failed');
+      err.exitCode = headless.exitCode;
+      throw err;
+    }
+    process.exit(headless.exitCode);
+  }
+
   const input = opts.input || process.stdin;
   const output = opts.output || process.stdout;
   const singleOption = opts.singleOption ?? entries?.singleOption ?? false;
@@ -27,10 +49,14 @@ async function selectOption(entries, opts = {}) {
       return only;
     }
 
+    const columns = output.columns || 80;
+    const maxWidth = Math.max(40, columns - 12);
+    const maxDigits = String(entries.length).length;
+
     for (const entry of entries) {
-      output.write(`${entry.id}. ${entry.label}\n`);
+      output.write(formatMenuItem(entry.id, entry.label, maxDigits, maxWidth) + '\n');
     }
-    output.write('0. Cancel/Back\n');
+    output.write(formatMenuItem(0, 'Cancel/Back', maxDigits, maxWidth) + '\n');
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -59,6 +85,21 @@ function askQuestion(rl, prompt) {
   return new Promise((resolve) => rl.question(prompt, resolve));
 }
 
+/**
+ * Normalize raw AI output and present selection.
+ * Recommended entry point for most callers — combines normalize + select.
+ * @param {string} rawOutput Raw AI-generated text with numbered options
+ * @param {object} opts Options passed through to normalizeOptions and selectOption
+ * @returns {Promise<{id:number,label:string,value:string,actionable:boolean,payload?:object|null,metadata?:object|null}>}
+ */
+async function run(rawOutput, opts = {}) {
+  const { entries, singleOption } = normalizeOptions(rawOutput, { attempt: opts.attempt ?? 0 });
+  return selectOption(entries, { ...opts, singleOption });
+}
+
 module.exports = {
   selectOption,
+  run,
+  normalizeOptions,
+  NormalizationError,
 };
