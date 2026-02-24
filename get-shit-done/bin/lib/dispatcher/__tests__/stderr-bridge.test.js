@@ -67,10 +67,10 @@ test('empty stderr produces empty stderrHint', () => {
 
 test('stderr containing secret is redacted in stderrHint', () => {
   const result = buildRecoveryPayload(
-    { code: 1, stderr: 'error: STRIPE_SECRET_KEY=sk_live_abc123', stdout: '' },
+    { code: 1, stderr: 'error: MY_SECRET=supersecret123', stdout: '' },
     'git push'
   );
-  assert.ok(!result.stderrHint.includes('sk_live_abc123'), 'raw secret must not appear');
+  assert.ok(!result.stderrHint.includes('supersecret123'), 'raw secret must not appear');
   assert.ok(result.stderrHint.includes('[REDACTED]'), 'redacted placeholder must appear');
 });
 
