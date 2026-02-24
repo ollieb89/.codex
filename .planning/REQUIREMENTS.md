@@ -1,59 +1,67 @@
-# Requirements: Codex Base Optimization — Numbered CLI Selection UX
+# Requirements: Codex Base Optimization
 
-**Defined:** 2026-02-24  
+**Defined:** 2026-02-24
 **Core Value:** Codex runs lean and predictable: the right agent/prompt triggers the right behavior with minimal friction.
 
-## v1 Requirements
+## v1.1 Requirements
 
-### Schema
+Requirements for v1.1.0 Standardize Selection & Security. Each maps to roadmap phases.
 
-- [ ] **SCH-01**: System prompts/agents enforce numbered option output (`1.`…`N.`), no filler text, and reject/normalize outputs that do not match.
-- [ ] **SCH-02**: Normalizer accepts JSON array outputs when present and falls back to numbered-text parsing; sanitizes ANSI/markdown artifacts before parsing.
+### Security & Dispatch
 
-### Selector
+- [ ] **SEC-01**: Dispatcher redacts provider-specific secrets (OpenAI `sk-*`, GitHub `ghp_*`, AWS `AKIA*`, Stripe `sk_live_*`, PEM blocks, connection strings) in command previews
+- [ ] **SEC-02**: Secret patterns are ordered specific-to-generic so prefix-based detection fires before generic fallback
+- [ ] **SEC-03**: Shared `commands.js` constants module eliminates independent destructive/mutating term definitions across sanitize, preview, and dispatcher
 
-- [ ] **SEL-01**: InputSelector renders options as a numbered list, reserves `0` as a cancel/exit, rejects non-numeric and out-of-range inputs, and returns structured `{index,label,payload}`.
-- [ ] **SEL-02**: Selector handles long/wide labels with truncation/alignment (including wide Unicode), and supports colorized numbers with a no-color fallback.
+### Selection Normalization
 
-### Safety
+- [ ] **SEL-01**: AI-generated numbered lists are normalized to contiguous 1..N IDs before render, regardless of source numbering
+- [ ] **SEL-02**: Normalizer preserves original label text and metadata while reassigning IDs
+- [ ] **SEL-03**: `--select` flag and `GS_DONE_SELECT` reference post-normalization IDs consistently
 
-- [ ] **SAF-01**: Dispatcher maps selections to actions (shell command, diff apply, or workflow step) and requires preview/confirmation plus dry-run for mutating actions.
-- [ ] **SAF-02**: Dispatcher sanitizes/allowlists payloads (commands/paths) to prevent unsafe execution and blocks actions outside the workspace.
+## Future Requirements
 
-### Automation UX
+Deferred to v1.2+. Tracked but not in current roadmap.
 
-- [ ] **UX-01**: Non-interactive/headless mode accepts a preselected number via flag/env, logs options and selection for audit, and exits cleanly on `0`.
+### Dispatch Hardening
 
-## v2 Requirements
+- **DSP-01**: Extended destructive verb list (delete, destroy, wipe, -rf, --hard, purge, unlink)
+- **DSP-02**: Configurable destructive-verb injection API for caller extension
 
-(None yet — add post-v1 learnings)
+### UI Polish
+
+- **UIP-01**: Intl.Segmenter-based Unicode padding for correct emoji/ZWJ width
+- **UIP-02**: process.stdout.columns ?? 80 fallback for non-TTY contexts
+- **UIP-03**: string-width v4.x evaluation if alignment bugs surface
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Heavy TUI frameworks (blessed/ink) | Overkill for simple selection; brittle in headless/CI |
-| Auto-execute without confirmation for mutating actions | Safety risk; keep human-in-the-loop |
-| Multi-select/fuzzy search/pagination | Defer until v1 flow is validated |
-| Free-form conversational outputs | Break deterministic parsing; enforce schema instead |
+| Fuzzy/substring match for --select | Non-deterministic; breaks CI pipelines silently |
+| Entropy-based secret detection | High false-positive rate on base64/hash content |
+| Per-provider secret type annotation in output | Leaks info about which credentials are present |
+| Persistent redaction logs | Logs containing originals are a secret leak vector |
+| Interactive TUI arrow-key navigation | Fails in headless/SSH; numbered list is always compatible |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCH-01 | Phase 7 | Pending |
-| SCH-02 | Phase 7 | Pending |
-| SEL-01 | Phase 7 | Pending |
-| SEL-02 | Phase 9 | Pending |
-| SAF-01 | Phase 8 | Pending |
-| SAF-02 | Phase 8 | Pending |
-| UX-01 | Phase 9 | Pending |
+| SEC-01 | — | Pending |
+| SEC-02 | — | Pending |
+| SEC-03 | — | Pending |
+| SEL-01 | — | Pending |
+| SEL-02 | — | Pending |
+| SEL-03 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 7 total
-- Mapped to phases: 7
-- Unmapped: 0 ✓
+- v1.1 requirements: 6 total
+- Mapped to phases: 0
+- Unmapped: 6 ⚠️
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after defining milestone scope*
+*Last updated: 2026-02-24 after initial definition*
