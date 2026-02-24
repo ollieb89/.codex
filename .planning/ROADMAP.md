@@ -31,7 +31,7 @@ Plans:
 - [ ] 08-01-PLAN.md — Safety shield: sanitizer/allowlist, force-dispatch gate, redaction, edit-on-block
 - [ ] 08-02-PLAN.md — Preview + confirmation/dry-run dispatcher flow with metadata and mini-diff
 
-## Phase 9: UX Polish & Headless
+## Phase 9: UX Polish & Headless [x] (2026-02-24)
 
 **Goal:** Improve readability and support scripted use.  
 **Requirements:** SEL-02, UX-01  
@@ -39,5 +39,9 @@ Plans:
 1. Long/wide labels truncate cleanly with aligned numbering (handles wide Unicode); full text available on demand.
 2. Colorized numbering available with a no-color fallback/flag.
 3. Non-interactive mode accepts preselected number via flag/env, logs options + selection, and exits cleanly on `0`.
+
+**Plans:**
+- [x] 09-01-PLAN.md — Width-aware formatting and aligned numbering
+- [x] 09-02-PLAN.md — Headless preselection and audit logging
 
 ---
